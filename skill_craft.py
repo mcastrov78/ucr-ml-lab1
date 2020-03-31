@@ -1,5 +1,6 @@
 import sys
 import pandas as pd
+import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
@@ -29,24 +30,23 @@ def ols(tensor_x, tensor_y):
     """
     # calculate values using matrices like w=(XT*X)-1*XT*y
     # build new X with additional 1s
-    print("x: %s" % tensor_x)
-    print("y: %s" % tensor_y)
+    print("\nx (%s): %s" % (tensor_x.shape, tensor_x))
+    print("y (%s): %s" % (tensor_y.shape, tensor_y))
+
     x_ones = torch.ones((tensor_x.shape[0], 1))
     x_reshaped = tensor_x.reshape((tensor_x.shape[0], 1))
     x_prime = torch.cat((x_reshaped, x_ones), 1)
     print("x_prime: %s" % x_prime)
 
-    x_prime_transpose = torch.transpose(x_prime, 0, 1)
-    print("x_prime_transpose: %s" % x_prime_transpose)
-    matmul_res1 = torch.matmul(x_prime_transpose, x_prime)
+    matmul_res1 = torch.matmul(x_prime.T, x_prime)
     print("matmul_res1: %s" % matmul_res1)
-    matmul_res1_inverse = torch.inverse(matmul_res1)
+    matmul_res1_inverse = matmul_res1.inverse()
     print("matmul_res1_inverse: %s" % matmul_res1_inverse)
-    matmul_res2 = torch.matmul(matmul_res1_inverse, x_prime_transpose)
+    matmul_res2 = torch.matmul(matmul_res1_inverse, x_prime.T)
     print("matmul_res2 (%s, %s): %s" % (matmul_res2.shape[0], matmul_res2.shape[1], matmul_res2))
     matmul_res_final = torch.matmul(matmul_res2, tensor_y)
     print("matmul_res_final: %s" % matmul_res_final)
-
+    
     return matmul_res_final
 
 
@@ -67,7 +67,7 @@ def scatterplot_test_set(al_tensor, apm_tensor, name):
 
 def plot_test_set_ols(al_tensor, apm_tensor, ols_coefficients, name):
     """
-    Plot a given test set .
+    Plot a given test set.
 
     :param al_tensor: tensor X
     :param apm_tensor: tensor y
@@ -89,6 +89,16 @@ def plot_test_set_ols(al_tensor, apm_tensor, ols_coefficients, name):
 
 
 def main(filename):
+    """
+    Main function.
+    :param filename: name of the file to read
+    """
+    '''
+    Your first task is to read the data set from the provided CSV file and put the data into tensors.
+    We will need two tensors: One for the input (the column ActionLatency) and one for the variable we want to predict (the column APM).
+    Implement a function read_csv that takes a file name, and two column names and returns two tensors, one for each of the columns.
+    Split the data into three sets: Use the first 30 entries as test set 1, then split the rest randomly into 20% test set 2 and 80% training set.
+    '''
     al_tensor, apm_tensor = read_csv(filename, "ActionLatency", "APM")
 
     # build Set 1 with the first 30 entries (TEST SET 1)
@@ -125,9 +135,17 @@ def main(filename):
     print("\nal3_tensor (%s): %s" % (al3_tensor.shape, al3_tensor))
     print("apm3_tensor (%s): %s" % (apm3_tensor.shape, apm3_tensor))
 
+    '''
+    Exploratory Data Analysis
+    Take the test set 1 (with thirty entries), and plot it as a scatterplot with Matplotlib. 
+    Does the data look linear? Try the same with the training set. 
+    What are the maximum, minimum and mean values for APM and ActionLatency? 
+    What is the standard deviation of the two variables? 
+    What is the correlation between the two variables?
+    '''
     # scatter plot and line in the same figure
     scatterplot_test_set(al1_tensor, apm1_tensor, "Test Set 1")
-    scatterplot_test_set(al3_tensor, apm3_tensor, "Training Set")
+    scatterplot_test_set(al3_tensor, apm3_tensor, "Test Set 3/Training Set")
 
     # print some statistics
     print("")
@@ -135,16 +153,15 @@ def main(filename):
     print("min AL: %s - APM: %s" % (torch.min(al_tensor), torch.min(apm_tensor)))
     print("mean AL: %s - APM: %s" % (torch.mean(al_tensor), torch.mean(apm_tensor)))
     print("std AL: %s - APM: %s" % (torch.std(al_tensor), torch.std(apm_tensor)))
+    print("corr AL-APM: %s" % (np.corrcoef(al_tensor, apm_tensor)))
 
-    # CORRELATION ???
-
-    # calculate Ordinary Least Squares from the Training Set
+    # calculate Ordinary Least Squares from the Training Set (#3)
     ols_result = ols(al3_tensor, apm3_tensor)
     print("\nOSL: %s" % ols_result)
 
     plot_test_set_ols(al1_tensor, apm1_tensor, ols_result, "Test Set 1")
     plot_test_set_ols(al2_tensor, apm2_tensor, ols_result, "Test Set 2")
-    plot_test_set_ols(al3_tensor, apm3_tensor, ols_result, "Training Set")
+    plot_test_set_ols(al3_tensor, apm3_tensor, ols_result, "Test Set 3/Training Set")
 
 
 if __name__ == "__main__":
