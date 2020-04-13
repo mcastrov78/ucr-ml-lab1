@@ -30,7 +30,8 @@ def ols(tensor_x, tensor_y):
     """
     # calculate values using matrices like w=(XT*X)-1*XT*y
     # build new X with additional 1s
-    print("\nx (%s): %s" % (tensor_x.shape, tensor_x))
+    print("\nOLS")
+    print("x (%s): %s" % (tensor_x.shape, tensor_x))
     print("y (%s): %s" % (tensor_y.shape, tensor_y))
 
     x_ones = torch.ones((tensor_x.shape[0], 1))
@@ -75,7 +76,8 @@ def plot_test_set_ols(al_tensor, apm_tensor, ols_coefficients, name):
     :param name: figure name
     """
     apm_tensor_ols = al_tensor * ols_coefficients[0] + ols_coefficients[1]
-    print("\nal_tensor (%s): %s..." % (al_tensor.shape[0], al_tensor[:5]))
+    print("\nplot_test_set_ols")
+    print("al_tensor (%s): %s..." % (al_tensor.shape[0], al_tensor[:5]))
     print("apm_tensor (%s): %s..." % (apm_tensor.shape[0], apm_tensor[:5]))
     print("apm_tensor_osl (%s): %s..." % (apm_tensor_ols.shape[0], apm_tensor_ols[:5]))
 
@@ -86,6 +88,74 @@ def plot_test_set_ols(al_tensor, apm_tensor, ols_coefficients, name):
     plt.xlabel("Action Latency")
     plt.ylabel("APM")
     plt.show()
+
+
+def model(tensor_w, tensor_x, tensor_b):
+    """
+    Accepts three tensors, w, x and b and returns the value for y where y = wx + b.
+
+    :param tensor_w: w tensor
+    :param tensor_x: x tensor
+    :param tensor_b: v tensor
+    :return: the value for y where y = wx + b
+    """
+    y = tensor_w * tensor_x
+    #print("y (%s): %s" % (y.shape, y))
+    y = y + tensor_b
+    #print("y (%s): %s" % (y.shape, y))
+    return y
+
+
+def loss_fn(tensor_y, tensor_real_y):
+    """
+    Takes a tensor containing output values y from our model, and another tensor containing observed output values,
+    and computes the mean squared distance between the two.
+
+    :param tensor_y: output values from our model
+    :param tensor_real_y: observed out values
+    :return: the mean squared distance between the two tensors
+    """
+    dif = tensor_real_y - tensor_y
+    #print("dif (%s): %s" % (dif.shape, dif))
+    squared_dif = dif ** 2
+    #print("squared_dif (%s): %s" % (squared_dif.shape, squared_dif))
+    squared_dif_mean = squared_dif.mean()
+    #print("squared_dif_mean (%s): %s" % (squared_dif_mean.shape, squared_dif_mean))
+    return squared_dif_mean
+
+
+def dmodel_w(tensor_x):
+    # or alternatively def dmodel_w(tensor_x, tensor_w, tensor_b):
+    return tensor_x
+
+
+def dmodel_b():
+    # or alternatively def dmodel_b(tensor_x, tensor_w, tensor_b):
+    return 1
+
+
+def dloss_m(tensor_y, tensor_real_y):
+    return -2 * (tensor_real_y - tensor_y)
+
+
+def training(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y):
+    print("\n*** TRAINING ***")
+
+    for it in range(iterations):
+        print("\n--- Iteration %s" % it)
+        tensor_y_calc = model(tensor_w, tensor_x, tensor_b)
+        loss = loss_fn(tensor_y_calc, tensor_y)
+        print("LOSS: %s" % loss)
+
+        gradient_w = (dloss_m(tensor_y_calc, tensor_y) * dmodel_w(tensor_x)).mean()
+        gradient_b = (dloss_m(tensor_y_calc, tensor_y) * dmodel_b()).mean()
+        print("gradient_w: %s - gradient_b: %s" % (gradient_w, gradient_b))
+
+        tensor_w = tensor_w - alpha * gradient_w
+        tensor_b = tensor_b - alpha * gradient_b
+        print("tensor_w: %s - tensor_b: %s " % (tensor_w, tensor_b))
+
+    return tensor_w, tensor_b
 
 
 def main(filename):
@@ -144,8 +214,8 @@ def main(filename):
     What is the correlation between the two variables?
     '''
     # scatter plot and line in the same figure
-    scatterplot_test_set(al1_tensor, apm1_tensor, "Test Set 1")
-    scatterplot_test_set(al3_tensor, apm3_tensor, "Test Set 3/Training Set")
+    #scatterplot_test_set(al1_tensor, apm1_tensor, "Test Set 1")
+    #scatterplot_test_set(al3_tensor, apm3_tensor, "Test Set 3/Training Set")
 
     # print some statistics
     print("")
@@ -157,11 +227,40 @@ def main(filename):
 
     # calculate Ordinary Least Squares from the Training Set (#3)
     ols_result = ols(al3_tensor, apm3_tensor)
-    print("\nOSL: %s" % ols_result)
+    print("\nOLS (%s): %s" % (ols_result.shape, ols_result))
 
-    plot_test_set_ols(al1_tensor, apm1_tensor, ols_result, "Test Set 1")
-    plot_test_set_ols(al2_tensor, apm2_tensor, ols_result, "Test Set 2")
-    plot_test_set_ols(al3_tensor, apm3_tensor, ols_result, "Test Set 3/Training Set")
+    #plot_test_set_ols(al1_tensor, apm1_tensor, ols_result, "Test Set 1")
+    #plot_test_set_ols(al2_tensor, apm2_tensor, ols_result, "Test Set 2")
+    #plot_test_set_ols(al3_tensor, apm3_tensor, ols_result, "Test Set 3/Training Set")
+
+    tensor_w = torch.empty(1)
+    tensor_b = torch.empty(1)
+    tensor_w[0] = -2
+    tensor_b[0] = 230
+
+    # TRAINING - NOT NORMALIZED
+    #tensor_w, tensor_b = training(1000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
+    #tensor_w, tensor_b = training(10000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
+
+    # TRAINING - NORMALIZED
+    print("\nal3tensor: %s" % al3_tensor)
+    print("al3tensor mean: %s - max: %s - min %s" % (torch.mean(al3_tensor), torch.max(al3_tensor), torch.min(al3_tensor)))
+    al3_tensorn = al3_tensor - torch.mean(al3_tensor)
+    print("al3tensorn: %s" % al3_tensorn)
+    print("al3tensorn DEN: %s" % ((torch.max(al3_tensor) - torch.min(al3_tensor)) / 2))
+    al3_tensorn = al3_tensorn / ((torch.max(al3_tensor) - torch.min(al3_tensor)) / 2)
+    print("al3tensorn: %s" % al3_tensorn)
+
+    tensor_w, tensor_b = training(10000, tensor_w, tensor_b, 1e-1, al3_tensorn, apm3_tensor)
+
+    # TRAINING - PLOT
+    #plot_test_set_ols(al3_tensorn, apm3_tensor, (tensor_w, tensor_b), "NEW")
+
+    # scikit-learn result
+    from sklearn.linear_model import LinearRegression
+    linr = LinearRegression()
+    linr.fit(al3_tensor.reshape(-1, 1), apm3_tensor)
+    print("\nsklearn.linear_model: %s, %s" % (linr.coef_[0], linr.intercept_))
 
 
 if __name__ == "__main__":
