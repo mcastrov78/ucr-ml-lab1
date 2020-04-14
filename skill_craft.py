@@ -138,22 +138,56 @@ def dloss_m(tensor_y, tensor_real_y):
     return -2 * (tensor_real_y - tensor_y)
 
 
+def normalize_tensor(tensor):
+    print("\nNormalization - Original tensor: %s" % tensor)
+    print("\tmean: %s - max: %s - min %s" % (torch.mean(tensor), torch.max(tensor), torch.min(tensor)))
+    norm_tensor = tensor - torch.mean(tensor)
+    print("\tNum: %s" % norm_tensor)
+    print("\tDen: %s" % ((torch.max(tensor) - torch.min(tensor)) / 2))
+    norm_tensor = norm_tensor / ((torch.max(tensor) - torch.min(tensor)) / 2)
+    print("\tnorm_tensor: %s" % norm_tensor)
+    return norm_tensor
+
+
 def training(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y):
     print("\n*** TRAINING ***")
-
     for it in range(iterations):
-        print("\n--- Iteration %s" % it)
+        # calculate loss
         tensor_y_calc = model(tensor_w, tensor_x, tensor_b)
         loss = loss_fn(tensor_y_calc, tensor_y)
-        print("LOSS: %s" % loss)
 
+        # calculate gradients
         gradient_w = (dloss_m(tensor_y_calc, tensor_y) * dmodel_w(tensor_x)).mean()
         gradient_b = (dloss_m(tensor_y_calc, tensor_y) * dmodel_b()).mean()
-        print("gradient_w: %s - gradient_b: %s" % (gradient_w, gradient_b))
 
+        # adjust coefficients
         tensor_w = tensor_w - alpha * gradient_w
         tensor_b = tensor_b - alpha * gradient_b
-        print("tensor_w: %s - tensor_b: %s " % (tensor_w, tensor_b))
+
+        print("N: %s\t | Loss: %f\t | Grad W: %s\t | Grad B: %s\t | W: %s\t | B: %s" %
+              (it, loss, gradient_w, gradient_b, tensor_w, tensor_b))
+
+    return tensor_w, tensor_b
+
+def training_auto(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y):
+    print("\n*** TRAINING AUTO***")
+    for it in range(iterations):
+        if tensor_w.grad is not None:
+            tensor_w.grad.zero_()
+        if tensor_b.grad is not None:
+            tensor_b.grad.zero_()
+
+        # calculate loss
+        tensor_y_calc = model(tensor_w, tensor_x, tensor_b)
+        loss = loss_fn(tensor_y_calc, tensor_y)
+        loss.backward()
+
+        # adjust coefficients
+        tensor_w = (tensor_w - alpha * tensor_w.grad).detach().requires_grad_()
+        tensor_b = (tensor_b - alpha * tensor_b.grad).detach().requires_grad_()
+
+        print("N: %s\t | Loss: %f\t | W: %s\t | B: %s" %
+              (it, loss, tensor_w, tensor_b))
 
     return tensor_w, tensor_b
 
@@ -233,35 +267,42 @@ def main(filename):
     #plot_test_set_ols(al2_tensor, apm2_tensor, ols_result, "Test Set 2")
     #plot_test_set_ols(al3_tensor, apm3_tensor, ols_result, "Test Set 3/Training Set")
 
-    tensor_w = torch.empty(1)
-    tensor_b = torch.empty(1)
-    tensor_w[0] = -2
-    tensor_b[0] = 230
+    '''
+    TRAINING
+    Do n times:
+        Calculate the current estimate for y using the current values for w and b, as well as the loss
+        Calculate the gradient
+        Print the current loss, gradient and iteration count
+        Update w and b using the gradient
+    '''
+    tensor_w = torch.tensor([-2.0])
+    tensor_b = torch.tensor([230.0])
+
 
     # TRAINING - NOT NORMALIZED
-    #tensor_w, tensor_b = training(1000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
+    tensor_w, tensor_b = training(1000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
     #tensor_w, tensor_b = training(10000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
+    #plot_test_set_ols(al3_tensor, apm3_tensor, (tensor_w, tensor_b), "NOT Normalized")
 
     # TRAINING - NORMALIZED
-    print("\nal3tensor: %s" % al3_tensor)
-    print("al3tensor mean: %s - max: %s - min %s" % (torch.mean(al3_tensor), torch.max(al3_tensor), torch.min(al3_tensor)))
-    al3_tensorn = al3_tensor - torch.mean(al3_tensor)
-    print("al3tensorn: %s" % al3_tensorn)
-    print("al3tensorn DEN: %s" % ((torch.max(al3_tensor) - torch.min(al3_tensor)) / 2))
-    al3_tensorn = al3_tensorn / ((torch.max(al3_tensor) - torch.min(al3_tensor)) / 2)
-    print("al3tensorn: %s" % al3_tensorn)
-
-    tensor_w, tensor_b = training(10000, tensor_w, tensor_b, 1e-1, al3_tensorn, apm3_tensor)
-
-    # TRAINING - PLOT
-    #plot_test_set_ols(al3_tensorn, apm3_tensor, (tensor_w, tensor_b), "NEW")
+    #al3_tensorn = normalize_tensor(al3_tensor)
+    #tensor_w, tensor_b = training(1000, tensor_w, tensor_b, 1e-1, al3_tensorn, apm3_tensor)
+    #plot_test_set_ols(al3_tensorn, apm3_tensor, (tensor_w, tensor_b), "Normalized")
 
     # scikit-learn result
+    '''
     from sklearn.linear_model import LinearRegression
     linr = LinearRegression()
     linr.fit(al3_tensor.reshape(-1, 1), apm3_tensor)
     print("\nsklearn.linear_model: %s, %s" % (linr.coef_[0], linr.intercept_))
+    '''
 
+    '''
+    Automated Gradients and Optimization
+    '''
+    tensor_w_auto = torch.tensor([-2.0], requires_grad=True)
+    tensor_b_auto = torch.tensor([230.0], requires_grad=True)
+    tensor_w_auto, tensor_b_auto = training_auto(1000, tensor_w_auto, tensor_b_auto, 1e-4, al3_tensor, apm3_tensor)
 
 if __name__ == "__main__":
     main(sys.argv[1])
