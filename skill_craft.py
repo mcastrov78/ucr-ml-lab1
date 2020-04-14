@@ -60,6 +60,7 @@ def scatterplot_test_set(al_tensor, apm_tensor, name):
     :param apm_tensor: tensor y
     :param name: figure name
     """
+    print("\nscatterplot_test_set *** %s ***" % name)
     plt.figure(num=name)
     plt.scatter(al_tensor, apm_tensor)
     plt.xlabel("Action Latency")
@@ -67,25 +68,25 @@ def scatterplot_test_set(al_tensor, apm_tensor, name):
     plt.show()
 
 
-def plot_test_set_ols(al_tensor, apm_tensor, ols_coefficients, name):
+def plot_test_set_and_y(al_tensor, apm_tensor, coefficients, name):
     """
     Plot a given test set.
 
     :param al_tensor: tensor X
     :param apm_tensor: tensor y
-    :param ols_coefficients: OLS coefficients
+    :param coefficients: w and b coefficients
     :param name: figure name
     """
-    apm_tensor_ols = al_tensor * ols_coefficients[0] + ols_coefficients[1]
-    print("\nplot_test_set_ols")
+    function_tensor = al_tensor * coefficients[0] + coefficients[1]
+    print("\nplot_test_set_and_y *** %s ***"  % name)
     print("al_tensor (%s): %s..." % (al_tensor.shape[0], al_tensor[:5]))
     print("apm_tensor (%s): %s..." % (apm_tensor.shape[0], apm_tensor[:5]))
-    print("apm_tensor_osl (%s): %s..." % (apm_tensor_ols.shape[0], apm_tensor_ols[:5]))
+    print("coefficients (%s): %s..." % (function_tensor.shape[0], function_tensor[:5]))
 
     plt.figure(num=name)
     plt.scatter(al_tensor, apm_tensor)
-    plt.plot(al_tensor, apm_tensor_ols)
-    plt.scatter(al_tensor, apm_tensor_ols)
+    plt.plot(al_tensor, function_tensor)
+    plt.scatter(al_tensor, function_tensor)
     plt.xlabel("Action Latency")
     plt.ylabel("APM")
     plt.show()
@@ -230,7 +231,7 @@ def main(filename):
     '''
     al_tensor, apm_tensor = read_csv(filename, "ActionLatency", "APM")
 
-    # build Set 1 with the first 30 entries (TEST SET 1)
+    # build Set 1 with the first 30 entries (*** TEST SET 1 ***)
     al1_tensor = al_tensor[:30]
     apm1_tensor = apm_tensor[:30]
     print("\nal1_tensor (%s): %s" % (al1_tensor.shape, al1_tensor))
@@ -242,6 +243,7 @@ def main(filename):
     # print("remaining_al_tensor (%s): %s" % (remaining_al_tensor.shape, remaining_al_tensor))
     # print("remaining_apm_tensor (%s): %s" % (remaining_apm_tensor.shape, remaining_apm_tensor))
 
+    # build Set 2 with 20% of remaining data (*** TEST SET 2 ***)
     # calculate the size of the remaining data  and the index where its first 20% ends
     remaining_size = remaining_al_tensor.shape[0]
     twenty_percent_index = (remaining_size * 20) // 100
@@ -252,13 +254,12 @@ def main(filename):
     random_perm = torch.randperm(remaining_size)
     print("random_perm (%s): %s" % (random_perm.shape, random_perm))
 
-    # build Set 2 with 20% of remaining data (TEST SET 2)
     al2_tensor = remaining_al_tensor[random_perm[:twenty_percent_index]]
     apm2_tensor = remaining_apm_tensor[random_perm[:twenty_percent_index]]
     print("\nal2_tensor shape: %s" % al2_tensor.shape)
     print("apm2_tensor shape: %s" % apm2_tensor.shape)
 
-    # build Set 3 with 80% of remaining data (TRAINING SET)
+    # build Set 3 with 80% of remaining data (*** TRAINING SET ***)
     al3_tensor = remaining_al_tensor[random_perm[twenty_percent_index:]]
     apm3_tensor = remaining_apm_tensor[random_perm[twenty_percent_index:]]
     print("\nal3_tensor (%s): %s" % (al3_tensor.shape, al3_tensor))
@@ -288,9 +289,9 @@ def main(filename):
     ols_result = ols(al3_tensor, apm3_tensor)
     print("\nOLS (%s): %s" % (ols_result.shape, ols_result))
 
-    #plot_test_set_ols(al1_tensor, apm1_tensor, ols_result, "Test Set 1")
-    #plot_test_set_ols(al2_tensor, apm2_tensor, ols_result, "Test Set 2")
-    #plot_test_set_ols(al3_tensor, apm3_tensor, ols_result, "Test Set 3/Training Set")
+    #plot_test_set_and_y(al1_tensor, apm1_tensor, ols_result, "Test Set 1")
+    #plot_test_set_and_y(al2_tensor, apm2_tensor, ols_result, "Test Set 2")
+    #plot_test_set_and_y(al3_tensor, apm3_tensor, ols_result, "Test Set 3/Training Set")
 
     '''
     TRAINING
@@ -305,22 +306,32 @@ def main(filename):
 
 
     # TRAINING - NOT NORMALIZED
-    #tensor_w, tensor_b = training(1000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
+    tensor_w, tensor_b = training(1000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
     #tensor_w, tensor_b = training(10000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
-    #plot_test_set_ols(al3_tensor, apm3_tensor, (tensor_w, tensor_b), "NOT Normalized")
+    #plot_test_set_and_y(al3_tensor, apm3_tensor, (tensor_w, tensor_b), "X NOT Normalized")
 
     # TRAINING - NORMALIZED
-    #al3_tensorn = normalize_tensor(al3_tensor)
-    #tensor_w, tensor_b = training(1000, tensor_w, tensor_b, 1e-1, al3_tensorn, apm3_tensor)
-    #plot_test_set_ols(al3_tensorn, apm3_tensor, (tensor_w, tensor_b), "Normalized")
+    al3_tensor_norm = normalize_tensor(al3_tensor)
+    tensor_w_norm = tensor_w.clone().detach()
+    tensor_b_norm = tensor_b.clone().detach()
+    #tensor_w_norm, tensor_b_norm = training(1000, tensor_w_norm, tensor_b_norm, 1e-1, al3_tensor_norm, apm3_tensor)
+    #plot_test_set_and_y(al3_tensor_norm, apm3_tensor, (tensor_w_norm, tensor_b_norm), "X Normalized")
 
-    # scikit-learn result
-    '''
-    from sklearn.linear_model import LinearRegression
-    linr = LinearRegression()
-    linr.fit(al3_tensor.reshape(-1, 1), apm3_tensor)
-    print("\nsklearn.linear_model: %s, %s" % (linr.coef_[0], linr.intercept_))
-    '''
+    # LOSS
+    tensor_y_learned = model(tensor_w, al3_tensor, tensor_b)
+    learned_model_loss = loss_fn(tensor_y_learned, apm3_tensor)
+    print("LOSS for TEST SET 3 (Training Set): %s " % learned_model_loss)
+
+    tensor_y_learned = model(tensor_w, al1_tensor, tensor_b)
+    learned_model_loss = loss_fn(tensor_y_learned, apm1_tensor)
+    plot_test_set_and_y(al1_tensor, apm1_tensor, (tensor_w, tensor_b), "Learned Model vs Test Set 1")
+    print("LOSS for TEST SET 1: %s " % learned_model_loss)
+
+    tensor_y_learned = model(tensor_w, al2_tensor, tensor_b)
+    learned_model_loss = loss_fn(tensor_y_learned, apm2_tensor)
+    plot_test_set_and_y(al2_tensor, apm2_tensor, (tensor_w, tensor_b), "Learned Model vs Test Set 2")
+    print("LOSS for TEST SET 2: %s " % learned_model_loss)
+
 
     '''
     Automated Gradients and Optimization
@@ -334,9 +345,17 @@ def main(filename):
     #training_opt(1000, tensor_w_auto, tensor_b_auto, 1e-4, al3_tensor, apm3_tensor)
     #plot_test_set_ols(al3_tensor, apm3_tensor, (tensor_w_optim.detach_(), tensor_b_optim.detach_()), "Optim - SDG")
 
-    training_opt(1000, tensor_w_auto, tensor_b_auto, 1e-4, al3_tensor, apm3_tensor, "Adam")
-    plot_test_set_ols(al3_tensor, apm3_tensor, (tensor_w_optim.detach_(), tensor_b_optim.detach_()), "Optim - Adam")
+    #training_opt(1000, tensor_w_auto, tensor_b_auto, 1e-4, al3_tensor, apm3_tensor, "Adam")
+    #plot_test_set_ols(al3_tensor, apm3_tensor, (tensor_w_optim.detach_(), tensor_b_optim.detach_()), "Optim - Adam")
 
+
+    # scikit-learn result
+    '''
+    from sklearn.linear_model import LinearRegression
+    linr = LinearRegression()
+    linr.fit(al3_tensor.reshape(-1, 1), apm3_tensor)
+    print("\nsklearn.linear_model: %s, %s" % (linr.coef_[0], linr.intercept_))
+    '''
 
 if __name__ == "__main__":
     main(sys.argv[1])
