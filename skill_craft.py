@@ -2,6 +2,7 @@ import sys
 import pandas as pd
 import numpy as np
 import torch
+import torch.optim as optim
 import matplotlib.pyplot as plt
 
 
@@ -169,6 +170,7 @@ def training(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y):
 
     return tensor_w, tensor_b
 
+
 def training_auto(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y):
     print("\n*** TRAINING AUTO***")
     for it in range(iterations):
@@ -185,6 +187,29 @@ def training_auto(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y):
         # adjust coefficients
         tensor_w = (tensor_w - alpha * tensor_w.grad).detach().requires_grad_()
         tensor_b = (tensor_b - alpha * tensor_b.grad).detach().requires_grad_()
+
+        print("N: %s\t | Loss: %f\t | W: %s\t | B: %s" %
+              (it, loss, tensor_w, tensor_b))
+
+    return tensor_w, tensor_b
+
+
+def training_opt(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y, optim_type="SDG"):
+    print("\n*** TRAINING OPT - %s ***" % optim_type)
+
+    optimizer = optim.SGD([tensor_w, tensor_b], lr=alpha)
+    if optim_type == "Adam":
+        optimizer = optim.Adam([tensor_w, tensor_b], lr=alpha)
+
+    for it in range(iterations):
+        optimizer.zero_grad
+
+        # calculate loss
+        tensor_y_calc = model(tensor_w, tensor_x, tensor_b)
+        loss = loss_fn(tensor_y_calc, tensor_y)
+
+        loss.backward()
+        optimizer.step()
 
         print("N: %s\t | Loss: %f\t | W: %s\t | B: %s" %
               (it, loss, tensor_w, tensor_b))
@@ -280,7 +305,7 @@ def main(filename):
 
 
     # TRAINING - NOT NORMALIZED
-    tensor_w, tensor_b = training(1000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
+    #tensor_w, tensor_b = training(1000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
     #tensor_w, tensor_b = training(10000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
     #plot_test_set_ols(al3_tensor, apm3_tensor, (tensor_w, tensor_b), "NOT Normalized")
 
@@ -302,7 +327,16 @@ def main(filename):
     '''
     tensor_w_auto = torch.tensor([-2.0], requires_grad=True)
     tensor_b_auto = torch.tensor([230.0], requires_grad=True)
-    tensor_w_auto, tensor_b_auto = training_auto(1000, tensor_w_auto, tensor_b_auto, 1e-4, al3_tensor, apm3_tensor)
+    #tensor_w_auto, tensor_b_auto = training_auto(1000, tensor_w_auto, tensor_b_auto, 1e-4, al3_tensor, apm3_tensor)
+
+    tensor_w_optim = torch.tensor([-2.0], requires_grad=True)
+    tensor_b_optim = torch.tensor([230.0], requires_grad=True)
+    #training_opt(1000, tensor_w_auto, tensor_b_auto, 1e-4, al3_tensor, apm3_tensor)
+    #plot_test_set_ols(al3_tensor, apm3_tensor, (tensor_w_optim.detach_(), tensor_b_optim.detach_()), "Optim - SDG")
+
+    training_opt(1000, tensor_w_auto, tensor_b_auto, 1e-4, al3_tensor, apm3_tensor, "Adam")
+    plot_test_set_ols(al3_tensor, apm3_tensor, (tensor_w_optim.detach_(), tensor_b_optim.detach_()), "Optim - Adam")
+
 
 if __name__ == "__main__":
     main(sys.argv[1])
