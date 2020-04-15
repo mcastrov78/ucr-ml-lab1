@@ -77,6 +77,8 @@ def plot_test_set_and_y(al_tensor, apm_tensor, coefficients, name):
     :param coefficients: w and b coefficients
     :param name: figure name
     """
+
+    # TODO: USE MODEL !!!!!!!!!!!!!!!!!!
     function_tensor = al_tensor * coefficients[0] + coefficients[1]
     print("\nplot_test_set_and_y *** %s ***"  % name)
     print("al_tensor (%s): %s..." % (al_tensor.shape[0], al_tensor[:5]))
@@ -85,8 +87,7 @@ def plot_test_set_and_y(al_tensor, apm_tensor, coefficients, name):
 
     plt.figure(num=name)
     plt.scatter(al_tensor, apm_tensor)
-    plt.plot(al_tensor, function_tensor)
-    plt.scatter(al_tensor, function_tensor)
+    plt.plot(al_tensor, function_tensor, color="red")
     plt.xlabel("Action Latency")
     plt.ylabel("APM")
     plt.show()
@@ -106,6 +107,12 @@ def model(tensor_w, tensor_x, tensor_b):
     y = y + tensor_b
     #print("y (%s): %s" % (y.shape, y))
     return y
+
+
+def model_nonlin(tensor_x, tensor_a, tensor_b, tensor_c):
+    tensor_y = tensor_a * (tensor_x ** tensor_b)
+    tensor_y = tensor_y + tensor_c
+    return tensor_y
 
 
 def loss_fn(tensor_y, tensor_real_y):
@@ -173,7 +180,7 @@ def training(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y):
 
 
 def training_auto(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y):
-    print("\n*** TRAINING AUTO***")
+    print("\n*** TRAINING AUTO ***")
     for it in range(iterations):
         if tensor_w.grad is not None:
             tensor_w.grad.zero_()
@@ -208,7 +215,6 @@ def training_opt(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y, opti
         # calculate loss
         tensor_y_calc = model(tensor_w, tensor_x, tensor_b)
         loss = loss_fn(tensor_y_calc, tensor_y)
-
         loss.backward()
         optimizer.step()
 
@@ -216,6 +222,25 @@ def training_opt(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y, opti
               (it, loss, tensor_w, tensor_b))
 
     return tensor_w, tensor_b
+
+
+def training_nonlin(iterations, tensor_a, tensor_b, tensor_c, alpha, tensor_x, tensor_y):
+    print("\n*** TRAINING NON LINEAR (OPT SGD) ***")
+
+    optimizer = optim.SGD([tensor_a, tensor_b, tensor_c], lr=alpha)
+    for it in range(iterations):
+        optimizer.zero_grad
+
+        # calculate loss
+        tensor_y_calc = model_nonlin(tensor_x, tensor_a, tensor_b, tensor_c)
+        loss = loss_fn(tensor_y_calc, tensor_y)
+        loss.backward()
+        optimizer.step()
+
+        print("N: %s\t | Loss: %f\t | A: %s\t | B: %s\t | C: %s" %
+              (it, loss, tensor_a, tensor_b, tensor_c))
+
+    return tensor_a, tensor_b, tensor_c
 
 
 def main(filename):
@@ -306,7 +331,7 @@ def main(filename):
 
 
     # TRAINING - NOT NORMALIZED
-    tensor_w, tensor_b = training(1000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
+    #tensor_w, tensor_b = training(1000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
     #tensor_w, tensor_b = training(10000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
     #plot_test_set_and_y(al3_tensor, apm3_tensor, (tensor_w, tensor_b), "X NOT Normalized")
 
@@ -324,12 +349,12 @@ def main(filename):
 
     tensor_y_learned = model(tensor_w, al1_tensor, tensor_b)
     learned_model_loss = loss_fn(tensor_y_learned, apm1_tensor)
-    plot_test_set_and_y(al1_tensor, apm1_tensor, (tensor_w, tensor_b), "Learned Model vs Test Set 1")
+    #plot_test_set_and_y(al1_tensor, apm1_tensor, (tensor_w, tensor_b), "Learned Model vs Test Set 1")
     print("LOSS for TEST SET 1: %s " % learned_model_loss)
 
     tensor_y_learned = model(tensor_w, al2_tensor, tensor_b)
     learned_model_loss = loss_fn(tensor_y_learned, apm2_tensor)
-    plot_test_set_and_y(al2_tensor, apm2_tensor, (tensor_w, tensor_b), "Learned Model vs Test Set 2")
+    #plot_test_set_and_y(al2_tensor, apm2_tensor, (tensor_w, tensor_b), "Learned Model vs Test Set 2")
     print("LOSS for TEST SET 2: %s " % learned_model_loss)
 
 
@@ -348,6 +373,25 @@ def main(filename):
     #training_opt(1000, tensor_w_auto, tensor_b_auto, 1e-4, al3_tensor, apm3_tensor, "Adam")
     #plot_test_set_ols(al3_tensor, apm3_tensor, (tensor_w_optim.detach_(), tensor_b_optim.detach_()), "Optim - Adam")
 
+    '''
+    A better fit
+    '''
+    tensor_a = torch.tensor([10000.0], requires_grad=True)
+    tensor_b = torch.tensor([-1.0], requires_grad=True)
+    tensor_c = torch.tensor([-60.0], requires_grad=True)
+
+    # y = a* x**b + c
+    tensor_a, tensor_b, tensor_c = training_nonlin(1000, tensor_a, tensor_b, tensor_c, 1e-6, al3_tensor, apm3_tensor)
+
+    print("\nNEW PLOT")
+    tensor_y_better = model_nonlin(al3_tensor, tensor_a, tensor_b, tensor_c)
+    plt.figure("NEW PLOT")
+    plt.scatter(al3_tensor, apm3_tensor)
+    plt.plot(al3_tensor, tensor_y_better.detach(), color="red")
+    #plt.scatter(al3_tensor, tensor_y_better.detach())
+    plt.xlabel("Action Latency")
+    plt.ylabel("APM")
+    plt.show()
 
     # scikit-learn result
     '''
