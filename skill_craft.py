@@ -310,7 +310,6 @@ def main(filename):
     tensor_w = torch.tensor([-2.0])
     tensor_b = torch.tensor([230.0])
 
-
     # TRAINING - NOT NORMALIZED
     tensor_w, tensor_b = training(1000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
     #tensor_w, tensor_b = training(10000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
@@ -338,31 +337,53 @@ def main(filename):
     plot_data_set_and_model(al2_tensor, apm2_tensor, tensor_y_learned, "Learned Model vs Test Set 2")
     print("LOSS for TEST SET 2: %s " % learned_model_loss)
 
-
     '''
     Automated Gradients and Optimization
     '''
+    # Auto
     tensor_w_auto = torch.tensor([-2.0], requires_grad=True)
     tensor_b_auto = torch.tensor([230.0], requires_grad=True)
     tensor_w_auto, tensor_b_auto = training_auto(1000, tensor_w_auto, tensor_b_auto, 1e-4, al3_tensor, apm3_tensor)
 
+    model_auto = model(al1_tensor, tensor_w_auto.detach(), tensor_b_auto.detach())
+    plot_data_set_and_model(al1_tensor, apm1_tensor, model_auto, "Auto - Test Set 1")
+
+    model_auto = model(al2_tensor, tensor_w_auto.detach(), tensor_b_auto.detach())
+    plot_data_set_and_model(al2_tensor, apm2_tensor, model_auto, "Auto - Test Set 2")
+
     # Optimization: SDG
     tensor_w_opt = torch.tensor([-2.0], requires_grad=True)
     tensor_b_opt = torch.tensor([230.0], requires_grad=True)
-
     tensor_w_opt, tensor_b_opt = training_opt(1000, tensor_w_opt, tensor_b_opt, al3_tensor, apm3_tensor,
                                                   optim.SGD([tensor_w, tensor_b], lr=1e-4))
-    model_opt = model(al3_tensor, tensor_w_opt.detach_(), tensor_b_opt.detach_())
-    plot_data_set_and_model(al3_tensor, apm3_tensor, model_opt, "Opt - SGD")
 
-    # Optimization: Adam
+    model_opt = model(al1_tensor, tensor_w_opt.detach(), tensor_b_opt.detach())
+    plot_data_set_and_model(al1_tensor, apm1_tensor, model_opt, "Opt SGD - Test Set 1")
+
+    model_opt = model(al2_tensor, tensor_w_opt.detach(), tensor_b_opt.detach())
+    plot_data_set_and_model(al2_tensor, apm2_tensor, model_opt, "Opt SGD - Test Set 2")
+
+    # Optimization: Adam UNSCALED
     tensor_w_opt = torch.tensor([-2.0], requires_grad=True)
     tensor_b_opt = torch.tensor([230.0], requires_grad=True)
-
     tensor_w_opt, tensor_b_opt = training_opt(1000, tensor_w_opt, tensor_b_opt, al3_tensor, apm3_tensor,
                                                   optim.Adam([tensor_w, tensor_b], lr=1e-4))
-    model_opt = model(al3_tensor, tensor_w_opt.detach_(), tensor_b_opt.detach_())
-    plot_data_set_and_model(al3_tensor, apm3_tensor, model_opt, "Opt - Adam")
+
+    model_opt = model(al1_tensor, tensor_w_opt.detach(), tensor_b_opt.detach())
+    plot_data_set_and_model(al1_tensor, apm1_tensor, model_opt, "Opt Adam UNSCALED - Test Set 1")
+
+    model_opt = model(al2_tensor, tensor_w_opt.detach(), tensor_b_opt.detach())
+    plot_data_set_and_model(al2_tensor, apm2_tensor, model_opt, "Opt Adam UNSCALED - Test Set 2")
+
+    # Optimization: Adam SCALED
+    tensor_w_opt, tensor_b_opt = training_opt(1000, tensor_w_opt, tensor_b_opt, al3_tensor_norm, apm3_tensor,
+                                                  optim.Adam([tensor_w, tensor_b], lr=1e-4))
+
+    model_opt = model(al1_tensor, tensor_w_opt.detach(), tensor_b_opt.detach())
+    plot_data_set_and_model(al1_tensor, apm1_tensor, model_opt, "Opt Adam SCALED - Test Set 1")
+
+    model_opt = model(al2_tensor, tensor_w_opt.detach(), tensor_b_opt.detach())
+    plot_data_set_and_model(al2_tensor, apm2_tensor, model_opt, "Opt Adam SCALED - Test Set 2")
 
     '''
     A better fit
@@ -375,8 +396,12 @@ def main(filename):
     optimizer = optim.Adam([tensor_a, tensor_b, tensor_c], lr=1e-4)
     tensor_a, tensor_b, tensor_c = training_nonlin(1000, tensor_a, tensor_b, tensor_c, al3_tensor, apm3_tensor,
                                                    model_nonlin, optimizer)
-    model_better = model_nonlin(al3_tensor, tensor_a.detach_(), tensor_b.detach(), tensor_c.detach())
-    plot_data_set_and_model(al3_tensor, apm3_tensor, model_better, "Better fit: y = a* x**b + c")
+
+    model_better = model_nonlin(al1_tensor, tensor_a.detach_(), tensor_b.detach(), tensor_c.detach())
+    plot_data_set_and_model(al1_tensor, apm1_tensor, model_better, "Better fit: y = a* x**b + c - Test Set 1")
+
+    model_better = model_nonlin(al2_tensor, tensor_a.detach_(), tensor_b.detach(), tensor_c.detach())
+    plot_data_set_and_model(al2_tensor, apm2_tensor, model_better, "Better fit: y = a* x**b + c - Test Set 2")
 
     # SECOND NON_LINEAR FUNCTION: y = a* e**(b*x) + c
     tensor_a = torch.tensor([1500.0], requires_grad=True)
@@ -386,8 +411,12 @@ def main(filename):
     optimizer = optim.Adam([tensor_a, tensor_b, tensor_c], lr=1e-4)
     tensor_a, tensor_b, tensor_c = training_nonlin(1000, tensor_a, tensor_b, tensor_c, al3_tensor, apm3_tensor,
                                                    model_nonlin2, optimizer)
-    model_better = model_nonlin2(al3_tensor, tensor_a.detach_(), tensor_b.detach(), tensor_c.detach())
-    plot_data_set_and_model(al3_tensor, apm3_tensor, model_better, "Better fit: y = a* e**(b*x) + ")
+
+    model_better = model_nonlin2(al1_tensor, tensor_a.detach_(), tensor_b.detach(), tensor_c.detach())
+    plot_data_set_and_model(al1_tensor, apm1_tensor, model_better, "Better fit: y = a* e**(b*x) + c - Test Set 1 ")
+
+    model_better = model_nonlin2(al2_tensor, tensor_a.detach_(), tensor_b.detach(), tensor_c.detach())
+    plot_data_set_and_model(al2_tensor, apm2_tensor, model_better, "Better fit: y = a* e**(b*x) + c - Test Set 2 ")
 
 
     # scikit-learn result
