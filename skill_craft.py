@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 import matplotlib.pyplot as plt
-
+import math
 
 def read_csv(filename, col_x, col_y):
     """
@@ -52,66 +52,54 @@ def ols(tensor_x, tensor_y):
     return matmul_res_final
 
 
-def scatterplot_test_set(al_tensor, apm_tensor, name):
-    """
-    Scatterplot a given test set.
-
-    :param al_tensor: tensor X
-    :param apm_tensor: tensor y
-    :param name: figure name
-    """
-    print("\nscatterplot_test_set *** %s ***" % name)
-    plt.figure(num=name)
-    plt.scatter(al_tensor, apm_tensor)
-    plt.xlabel("Action Latency")
-    plt.ylabel("APM")
-    plt.show()
-
-
-def plot_test_set_and_y(al_tensor, apm_tensor, coefficients, name):
+def plot_data_set_and_model(al_tensor, apm_tensor, model=None, name="Figure"):
     """
     Plot a given test set.
 
     :param al_tensor: tensor X
     :param apm_tensor: tensor y
-    :param coefficients: w and b coefficients
+    :param model: model function
     :param name: figure name
     """
-
-    # TODO: USE MODEL !!!!!!!!!!!!!!!!!!
-    function_tensor = al_tensor * coefficients[0] + coefficients[1]
-    print("\nplot_test_set_and_y *** %s ***"  % name)
-    print("al_tensor (%s): %s..." % (al_tensor.shape[0], al_tensor[:5]))
-    print("apm_tensor (%s): %s..." % (apm_tensor.shape[0], apm_tensor[:5]))
-    print("coefficients (%s): %s..." % (function_tensor.shape[0], function_tensor[:5]))
-
+    print("\n*** plot_data_set_and_model: %s ***" % name)
     plt.figure(num=name)
     plt.scatter(al_tensor, apm_tensor)
-    plt.plot(al_tensor, function_tensor, color="red")
+    if model is not None:
+        plt.plot(al_tensor, model, color="red")
     plt.xlabel("Action Latency")
     plt.ylabel("APM")
     plt.show()
 
 
-def model(tensor_w, tensor_x, tensor_b):
+def model(tensor_x, tensor_w, tensor_b):
     """
     Accepts three tensors, w, x and b and returns the value for y where y = wx + b.
 
-    :param tensor_w: w tensor
     :param tensor_x: x tensor
-    :param tensor_b: v tensor
+    :param tensor_w: w parameter tensor
+    :param tensor_b: v parameter tensor
     :return: the value for y where y = wx + b
     """
-    y = tensor_w * tensor_x
-    #print("y (%s): %s" % (y.shape, y))
-    y = y + tensor_b
-    #print("y (%s): %s" % (y.shape, y))
-    return y
+    tensor_y = tensor_w * tensor_x
+    #print("tensor_y (%s): %s" % (tensor_y.shape, tensor_y))
+    tensor_y = tensor_y + tensor_b
+    #print("tensor_y (%s): %s" % (tensor_y.shape, tensor_y))
+    return tensor_y
 
 
 def model_nonlin(tensor_x, tensor_a, tensor_b, tensor_c):
     tensor_y = tensor_a * (tensor_x ** tensor_b)
+    #print("tensor_y (%s): %s" % (tensor_y.shape, tensor_y))
     tensor_y = tensor_y + tensor_c
+    #print("tensor_y (%s): %s" % (tensor_y.shape, tensor_y))
+    return tensor_y
+
+
+def model_nonlin2(tensor_x, tensor_a, tensor_b, tensor_c):
+    tensor_y = tensor_a * torch.exp(tensor_b * tensor_x)
+    print("tensor_y (%s): %s" % (tensor_y.shape, tensor_y))
+    tensor_y = tensor_y + tensor_c
+    print("tensor_y (%s): %s" % (tensor_y.shape, tensor_y))
     return tensor_y
 
 
@@ -162,7 +150,7 @@ def training(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y):
     print("\n*** TRAINING ***")
     for it in range(iterations):
         # calculate loss
-        tensor_y_calc = model(tensor_w, tensor_x, tensor_b)
+        tensor_y_calc = model(tensor_x, tensor_w, tensor_b)
         loss = loss_fn(tensor_y_calc, tensor_y)
 
         # calculate gradients
@@ -188,7 +176,7 @@ def training_auto(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y):
             tensor_b.grad.zero_()
 
         # calculate loss
-        tensor_y_calc = model(tensor_w, tensor_x, tensor_b)
+        tensor_y_calc = model(tensor_x, tensor_w, tensor_b)
         loss = loss_fn(tensor_y_calc, tensor_y)
         loss.backward()
 
@@ -202,18 +190,13 @@ def training_auto(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y):
     return tensor_w, tensor_b
 
 
-def training_opt(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y, optim_type="SDG"):
-    print("\n*** TRAINING OPT - %s ***" % optim_type)
-
-    optimizer = optim.SGD([tensor_w, tensor_b], lr=alpha)
-    if optim_type == "Adam":
-        optimizer = optim.Adam([tensor_w, tensor_b], lr=alpha)
-
+def training_opt(iterations, tensor_w, tensor_b, tensor_x, tensor_y, optimizer):
+    print("\n*** TRAINING OPT ***")
     for it in range(iterations):
         optimizer.zero_grad
 
         # calculate loss
-        tensor_y_calc = model(tensor_w, tensor_x, tensor_b)
+        tensor_y_calc = model(tensor_x, tensor_w, tensor_b)
         loss = loss_fn(tensor_y_calc, tensor_y)
         loss.backward()
         optimizer.step()
@@ -224,15 +207,13 @@ def training_opt(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y, opti
     return tensor_w, tensor_b
 
 
-def training_nonlin(iterations, tensor_a, tensor_b, tensor_c, alpha, tensor_x, tensor_y):
-    print("\n*** TRAINING NON LINEAR (OPT SGD) ***")
-
-    optimizer = optim.SGD([tensor_a, tensor_b, tensor_c], lr=alpha)
+def training_nonlin(iterations, tensor_a, tensor_b, tensor_c, tensor_x, tensor_y, nonlin_function, optimizer):
+    print("\n*** TRAINING NON LINEAR ***")
     for it in range(iterations):
         optimizer.zero_grad
 
         # calculate loss
-        tensor_y_calc = model_nonlin(tensor_x, tensor_a, tensor_b, tensor_c)
+        tensor_y_calc = nonlin_function(tensor_x, tensor_a, tensor_b, tensor_c)
         loss = loss_fn(tensor_y_calc, tensor_y)
         loss.backward()
         optimizer.step()
@@ -299,8 +280,8 @@ def main(filename):
     What is the correlation between the two variables?
     '''
     # scatter plot and line in the same figure
-    #scatterplot_test_set(al1_tensor, apm1_tensor, "Test Set 1")
-    #scatterplot_test_set(al3_tensor, apm3_tensor, "Test Set 3/Training Set")
+    plot_data_set_and_model(al1_tensor, apm1_tensor, name="Test Set 1")
+    plot_data_set_and_model(al3_tensor, apm3_tensor, name="Test Set 3/Training Set")
 
     # print some statistics
     print("")
@@ -314,9 +295,9 @@ def main(filename):
     ols_result = ols(al3_tensor, apm3_tensor)
     print("\nOLS (%s): %s" % (ols_result.shape, ols_result))
 
-    #plot_test_set_and_y(al1_tensor, apm1_tensor, ols_result, "Test Set 1")
-    #plot_test_set_and_y(al2_tensor, apm2_tensor, ols_result, "Test Set 2")
-    #plot_test_set_and_y(al3_tensor, apm3_tensor, ols_result, "Test Set 3/Training Set")
+    plot_data_set_and_model(al1_tensor, apm1_tensor, model(al1_tensor, ols_result[0], ols_result[1]), "Test Set 1")
+    plot_data_set_and_model(al2_tensor, apm2_tensor, model(al2_tensor, ols_result[0], ols_result[1]), "Test Set 2")
+    plot_data_set_and_model(al3_tensor, apm3_tensor, model(al3_tensor, ols_result[0], ols_result[1]), "Test Set 3/Training Set")
 
     '''
     TRAINING
@@ -331,30 +312,30 @@ def main(filename):
 
 
     # TRAINING - NOT NORMALIZED
-    #tensor_w, tensor_b = training(1000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
+    tensor_w, tensor_b = training(1000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
     #tensor_w, tensor_b = training(10000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
-    #plot_test_set_and_y(al3_tensor, apm3_tensor, (tensor_w, tensor_b), "X NOT Normalized")
+    plot_data_set_and_model(al3_tensor, apm3_tensor, model(al3_tensor, tensor_w, tensor_b), "X NOT Normalized")
 
     # TRAINING - NORMALIZED
     al3_tensor_norm = normalize_tensor(al3_tensor)
     tensor_w_norm = tensor_w.clone().detach()
     tensor_b_norm = tensor_b.clone().detach()
-    #tensor_w_norm, tensor_b_norm = training(1000, tensor_w_norm, tensor_b_norm, 1e-1, al3_tensor_norm, apm3_tensor)
-    #plot_test_set_and_y(al3_tensor_norm, apm3_tensor, (tensor_w_norm, tensor_b_norm), "X Normalized")
+    tensor_w_norm, tensor_b_norm = training(1000, tensor_w_norm, tensor_b_norm, 1e-1, al3_tensor_norm, apm3_tensor)
+    plot_data_set_and_model(al3_tensor_norm, apm3_tensor, model(al3_tensor_norm, tensor_w_norm, tensor_b_norm), "X Normalized")
 
     # LOSS
-    tensor_y_learned = model(tensor_w, al3_tensor, tensor_b)
+    tensor_y_learned = model(al3_tensor, tensor_w, tensor_b)
     learned_model_loss = loss_fn(tensor_y_learned, apm3_tensor)
     print("LOSS for TEST SET 3 (Training Set): %s " % learned_model_loss)
 
-    tensor_y_learned = model(tensor_w, al1_tensor, tensor_b)
+    tensor_y_learned = model(al1_tensor, tensor_w, tensor_b)
     learned_model_loss = loss_fn(tensor_y_learned, apm1_tensor)
-    #plot_test_set_and_y(al1_tensor, apm1_tensor, (tensor_w, tensor_b), "Learned Model vs Test Set 1")
+    plot_data_set_and_model(al1_tensor, apm1_tensor, tensor_y_learned, "Learned Model vs Test Set 1")
     print("LOSS for TEST SET 1: %s " % learned_model_loss)
 
-    tensor_y_learned = model(tensor_w, al2_tensor, tensor_b)
+    tensor_y_learned = model(al2_tensor, tensor_w, tensor_b)
     learned_model_loss = loss_fn(tensor_y_learned, apm2_tensor)
-    #plot_test_set_and_y(al2_tensor, apm2_tensor, (tensor_w, tensor_b), "Learned Model vs Test Set 2")
+    plot_data_set_and_model(al2_tensor, apm2_tensor, tensor_y_learned, "Learned Model vs Test Set 2")
     print("LOSS for TEST SET 2: %s " % learned_model_loss)
 
 
@@ -363,35 +344,51 @@ def main(filename):
     '''
     tensor_w_auto = torch.tensor([-2.0], requires_grad=True)
     tensor_b_auto = torch.tensor([230.0], requires_grad=True)
-    #tensor_w_auto, tensor_b_auto = training_auto(1000, tensor_w_auto, tensor_b_auto, 1e-4, al3_tensor, apm3_tensor)
+    tensor_w_auto, tensor_b_auto = training_auto(1000, tensor_w_auto, tensor_b_auto, 1e-4, al3_tensor, apm3_tensor)
 
-    tensor_w_optim = torch.tensor([-2.0], requires_grad=True)
-    tensor_b_optim = torch.tensor([230.0], requires_grad=True)
-    #training_opt(1000, tensor_w_auto, tensor_b_auto, 1e-4, al3_tensor, apm3_tensor)
-    #plot_test_set_ols(al3_tensor, apm3_tensor, (tensor_w_optim.detach_(), tensor_b_optim.detach_()), "Optim - SDG")
+    # Optimization: SDG
+    tensor_w_opt = torch.tensor([-2.0], requires_grad=True)
+    tensor_b_opt = torch.tensor([230.0], requires_grad=True)
 
-    #training_opt(1000, tensor_w_auto, tensor_b_auto, 1e-4, al3_tensor, apm3_tensor, "Adam")
-    #plot_test_set_ols(al3_tensor, apm3_tensor, (tensor_w_optim.detach_(), tensor_b_optim.detach_()), "Optim - Adam")
+    tensor_w_opt, tensor_b_opt = training_opt(1000, tensor_w_opt, tensor_b_opt, al3_tensor, apm3_tensor,
+                                                  optim.SGD([tensor_w, tensor_b], lr=1e-4))
+    model_opt = model(al3_tensor, tensor_w_opt.detach_(), tensor_b_opt.detach_())
+    plot_data_set_and_model(al3_tensor, apm3_tensor, model_opt, "Opt - SGD")
+
+    # Optimization: Adam
+    tensor_w_opt = torch.tensor([-2.0], requires_grad=True)
+    tensor_b_opt = torch.tensor([230.0], requires_grad=True)
+
+    tensor_w_opt, tensor_b_opt = training_opt(1000, tensor_w_opt, tensor_b_opt, al3_tensor, apm3_tensor,
+                                                  optim.Adam([tensor_w, tensor_b], lr=1e-4))
+    model_opt = model(al3_tensor, tensor_w_opt.detach_(), tensor_b_opt.detach_())
+    plot_data_set_and_model(al3_tensor, apm3_tensor, model_opt, "Opt - Adam")
 
     '''
     A better fit
     '''
-    tensor_a = torch.tensor([10000.0], requires_grad=True)
+    # FIRST NON_LINEAR FUNCTION: y = a* x**b + c
+    tensor_a = torch.tensor([14000.0], requires_grad=True)
     tensor_b = torch.tensor([-1.0], requires_grad=True)
-    tensor_c = torch.tensor([-60.0], requires_grad=True)
+    tensor_c = torch.tensor([-20.0], requires_grad=True)
 
-    # y = a* x**b + c
-    tensor_a, tensor_b, tensor_c = training_nonlin(1000, tensor_a, tensor_b, tensor_c, 1e-6, al3_tensor, apm3_tensor)
+    optimizer = optim.Adam([tensor_a, tensor_b, tensor_c], lr=1e-4)
+    tensor_a, tensor_b, tensor_c = training_nonlin(1000, tensor_a, tensor_b, tensor_c, al3_tensor, apm3_tensor,
+                                                   model_nonlin, optimizer)
+    model_better = model_nonlin(al3_tensor, tensor_a.detach_(), tensor_b.detach(), tensor_c.detach())
+    plot_data_set_and_model(al3_tensor, apm3_tensor, model_better, "Better fit: y = a* x**b + c")
 
-    print("\nNEW PLOT")
-    tensor_y_better = model_nonlin(al3_tensor, tensor_a, tensor_b, tensor_c)
-    plt.figure("NEW PLOT")
-    plt.scatter(al3_tensor, apm3_tensor)
-    plt.plot(al3_tensor, tensor_y_better.detach(), color="red")
-    #plt.scatter(al3_tensor, tensor_y_better.detach())
-    plt.xlabel("Action Latency")
-    plt.ylabel("APM")
-    plt.show()
+    # SECOND NON_LINEAR FUNCTION: y = a* e**(b*x) + c
+    tensor_a = torch.tensor([1500.0], requires_grad=True)
+    tensor_b = torch.tensor([-0.06], requires_grad=True)
+    tensor_c = torch.tensor([20.0], requires_grad=True)
+
+    optimizer = optim.Adam([tensor_a, tensor_b, tensor_c], lr=1e-4)
+    tensor_a, tensor_b, tensor_c = training_nonlin(1000, tensor_a, tensor_b, tensor_c, al3_tensor, apm3_tensor,
+                                                   model_nonlin2, optimizer)
+    model_better = model_nonlin2(al3_tensor, tensor_a.detach_(), tensor_b.detach(), tensor_c.detach())
+    plot_data_set_and_model(al3_tensor, apm3_tensor, model_better, "Better fit: y = a* e**(b*x) + ")
+
 
     # scikit-learn result
     '''
