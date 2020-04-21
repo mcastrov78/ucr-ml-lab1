@@ -97,9 +97,9 @@ def model_nonlin(tensor_x, tensor_a, tensor_b, tensor_c):
 
 def model_nonlin2(tensor_x, tensor_a, tensor_b, tensor_c):
     tensor_y = tensor_a * torch.exp(tensor_b * tensor_x)
-    print("tensor_y (%s): %s" % (tensor_y.shape, tensor_y))
+    #print("tensor_y (%s): %s" % (tensor_y.shape, tensor_y))
     tensor_y = tensor_y + tensor_c
-    print("tensor_y (%s): %s" % (tensor_y.shape, tensor_y))
+    #print("tensor_y (%s): %s" % (tensor_y.shape, tensor_y))
     return tensor_y
 
 
@@ -325,17 +325,17 @@ def main(filename):
     # LOSS
     tensor_y_learned = model(al3_tensor, tensor_w, tensor_b)
     learned_model_loss = loss_fn(tensor_y_learned, apm3_tensor)
-    print("LOSS for TEST SET 3 (Training Set): %s " % learned_model_loss)
+    print("\nLOSS for TEST SET 3 (Training Set): %s " % learned_model_loss)
 
     tensor_y_learned = model(al1_tensor, tensor_w, tensor_b)
     learned_model_loss = loss_fn(tensor_y_learned, apm1_tensor)
+    print("\nLOSS for TEST SET 1: %s " % learned_model_loss)
     plot_data_set_and_model(al1_tensor, apm1_tensor, tensor_y_learned, "Learned Model vs Test Set 1")
-    print("LOSS for TEST SET 1: %s " % learned_model_loss)
 
     tensor_y_learned = model(al2_tensor, tensor_w, tensor_b)
     learned_model_loss = loss_fn(tensor_y_learned, apm2_tensor)
+    print("\nLOSS for TEST SET 2: %s " % learned_model_loss)
     plot_data_set_and_model(al2_tensor, apm2_tensor, tensor_y_learned, "Learned Model vs Test Set 2")
-    print("LOSS for TEST SET 2: %s " % learned_model_loss)
 
     '''
     Automated Gradients and Optimization
@@ -346,43 +346,60 @@ def main(filename):
     tensor_w_auto, tensor_b_auto = training_auto(1000, tensor_w_auto, tensor_b_auto, 1e-4, al3_tensor, apm3_tensor)
 
     model_auto = model(al1_tensor, tensor_w_auto.detach(), tensor_b_auto.detach())
+    learned_model_loss = loss_fn(model_auto, apm1_tensor)
+    print("\nLOSS for TEST SET 1 (Auto): %s " % learned_model_loss)
     plot_data_set_and_model(al1_tensor, apm1_tensor, model_auto, "Auto - Test Set 1")
 
+
     model_auto = model(al2_tensor, tensor_w_auto.detach(), tensor_b_auto.detach())
+    learned_model_loss = loss_fn(model_auto, apm2_tensor)
+    print("\nLOSS for TEST SET 2 (Auto): %s " % learned_model_loss)
     plot_data_set_and_model(al2_tensor, apm2_tensor, model_auto, "Auto - Test Set 2")
 
     # Optimization: SDG
     tensor_w_opt = torch.tensor([-2.0], requires_grad=True)
     tensor_b_opt = torch.tensor([230.0], requires_grad=True)
     tensor_w_opt, tensor_b_opt = training_opt(1000, tensor_w_opt, tensor_b_opt, al3_tensor, apm3_tensor,
-                                                  optim.SGD([tensor_w, tensor_b], lr=1e-4))
+                                                  optim.SGD([tensor_w_opt, tensor_b_opt], lr=1e-4))
 
     model_opt = model(al1_tensor, tensor_w_opt.detach(), tensor_b_opt.detach())
+    learned_model_loss = loss_fn(model_opt, apm1_tensor)
+    print("\nLOSS for TEST SET 1 (SDG): %s " % learned_model_loss)
     plot_data_set_and_model(al1_tensor, apm1_tensor, model_opt, "Opt SGD - Test Set 1")
 
     model_opt = model(al2_tensor, tensor_w_opt.detach(), tensor_b_opt.detach())
+    learned_model_loss = loss_fn(model_opt, apm2_tensor)
+    print("\nLOSS for TEST SET 2 (SDG): %s " % learned_model_loss)
     plot_data_set_and_model(al2_tensor, apm2_tensor, model_opt, "Opt SGD - Test Set 2")
 
     # Optimization: Adam UNSCALED
     tensor_w_opt = torch.tensor([-2.0], requires_grad=True)
     tensor_b_opt = torch.tensor([230.0], requires_grad=True)
     tensor_w_opt, tensor_b_opt = training_opt(1000, tensor_w_opt, tensor_b_opt, al3_tensor, apm3_tensor,
-                                                  optim.Adam([tensor_w, tensor_b], lr=1e-4))
+                                                  optim.Adam([tensor_w_opt, tensor_b_opt], lr=1e-4))
 
     model_opt = model(al1_tensor, tensor_w_opt.detach(), tensor_b_opt.detach())
+    learned_model_loss = loss_fn(model_opt, apm1_tensor)
+    print("\nLOSS for TEST SET 1 (Adam UNSCALED): %s " % learned_model_loss)
     plot_data_set_and_model(al1_tensor, apm1_tensor, model_opt, "Opt Adam UNSCALED - Test Set 1")
 
     model_opt = model(al2_tensor, tensor_w_opt.detach(), tensor_b_opt.detach())
+    learned_model_loss = loss_fn(model_opt, apm2_tensor)
+    print("\nLOSS for TEST SET 2 (Adam UNSCALED): %s " % learned_model_loss)
     plot_data_set_and_model(al2_tensor, apm2_tensor, model_opt, "Opt Adam UNSCALED - Test Set 2")
 
     # Optimization: Adam SCALED
     tensor_w_opt, tensor_b_opt = training_opt(1000, tensor_w_opt, tensor_b_opt, al3_tensor_norm, apm3_tensor,
-                                                  optim.Adam([tensor_w, tensor_b], lr=1e-4))
+                                                  optim.Adam([tensor_w_opt, tensor_b_opt], lr=1e-4))
 
     model_opt = model(al1_tensor, tensor_w_opt.detach(), tensor_b_opt.detach())
+    learned_model_loss = loss_fn(model_opt, apm1_tensor)
+    print("\nLOSS for TEST SET 1 (Adam SCALED): %s " % learned_model_loss)
     plot_data_set_and_model(al1_tensor, apm1_tensor, model_opt, "Opt Adam SCALED - Test Set 1")
 
     model_opt = model(al2_tensor, tensor_w_opt.detach(), tensor_b_opt.detach())
+    learned_model_loss = loss_fn(model_opt, apm2_tensor)
+    print("\nLOSS for TEST SET 2 (Adam SCALED): %s " % learned_model_loss)
     plot_data_set_and_model(al2_tensor, apm2_tensor, model_opt, "Opt Adam SCALED - Test Set 2")
 
     '''
@@ -417,7 +434,6 @@ def main(filename):
 
     model_better = model_nonlin2(al2_tensor, tensor_a.detach_(), tensor_b.detach(), tensor_c.detach())
     plot_data_set_and_model(al2_tensor, apm2_tensor, model_better, "Better fit: y = a* e**(b*x) + c - Test Set 2 ")
-
 
     # scikit-learn result
     '''
