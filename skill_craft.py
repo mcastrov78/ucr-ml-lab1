@@ -499,33 +499,34 @@ def main(filename):
                                                    model_nonlin, optimizer)
 
     model_better = model_nonlin(al1_tensor, tensor_a.detach_(), tensor_b.detach(), tensor_c.detach())
+    learned_model_loss = loss_fn(model_better, apm1_tensor)
+    print("\nLOSS for TEST SET 1 (Better Fit F1): %s " % learned_model_loss)
     plot_data_set_and_model(al1_tensor, apm1_tensor, model_better, "Better fit: y = a* x**b + c - Test Set 1")
 
     model_better = model_nonlin(al2_tensor, tensor_a.detach_(), tensor_b.detach(), tensor_c.detach())
+    learned_model_loss = loss_fn(model_better, apm2_tensor)
+    print("\nLOSS for TEST SET 2 (Better Fit F1): %s " % learned_model_loss)
     plot_data_set_and_model(al2_tensor, apm2_tensor, model_better, "Better fit: y = a* x**b + c - Test Set 2")
 
     # SECOND NON_LINEAR FUNCTION: y = a * e**(b*x) + c
-    tensor_a = torch.tensor([1500.0], requires_grad=True)
-    tensor_b = torch.tensor([-0.06], requires_grad=True)
+    tensor_a = torch.tensor([1400.0], requires_grad=True)
+    tensor_b = torch.tensor([-0.05], requires_grad=True)
     tensor_c = torch.tensor([20.0], requires_grad=True)
 
-    optimizer = optim.Adam([tensor_a, tensor_b, tensor_c], lr=1e-4)
+    optimizer = optim.Adam([tensor_a, tensor_b, tensor_c], lr=1e-5)
     tensor_a, tensor_b, tensor_c = training_nonlin(1000, tensor_a, tensor_b, tensor_c, al3_tensor, apm3_tensor,
                                                    model_nonlin2, optimizer)
 
     model_better = model_nonlin2(al1_tensor, tensor_a.detach_(), tensor_b.detach(), tensor_c.detach())
+    learned_model_loss = loss_fn(model_better, apm1_tensor)
+    print("\nLOSS for TEST SET 1 (Better Fit F2): %s " % learned_model_loss)
     plot_data_set_and_model(al1_tensor, apm1_tensor, model_better, "Better fit: y = a* e**(b*x) + c - Test Set 1 ")
 
     model_better = model_nonlin2(al2_tensor, tensor_a.detach_(), tensor_b.detach(), tensor_c.detach())
+    learned_model_loss = loss_fn(model_better, apm2_tensor)
+    print("\nLOSS for TEST SET 2 (Better Fit F2): %s " % learned_model_loss)
     plot_data_set_and_model(al2_tensor, apm2_tensor, model_better, "Better fit: y = a* e**(b*x) + c - Test Set 2 ")
 
-    # scikit-learn result
-    '''
-    from sklearn.linear_model import LinearRegression
-    linr = LinearRegression()
-    linr.fit(al3_tensor.reshape(-1, 1), apm3_tensor)
-    print("\nsklearn.linear_model: %s, %s" % (linr.coef_[0], linr.intercept_))
-    '''
-
+    
 if __name__ == "__main__":
     main(sys.argv[1])
