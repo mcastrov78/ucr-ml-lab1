@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 import matplotlib.pyplot as plt
-import math
+
 
 def read_csv(filename, col_x, col_y):
     """
@@ -23,7 +23,7 @@ def read_csv(filename, col_x, col_y):
 
 def ols(tensor_x, tensor_y):
     """
-    Calculate Ordinary Least Squares for function like y=wx + b.
+    Calculate Ordinary Least Squares for a function of the form y = wx + b.
 
     :param tensor_x: tensor X
     :param tensor_y: tensor Y
@@ -73,7 +73,7 @@ def plot_data_set_and_model(al_tensor, apm_tensor, model=None, name="Figure"):
 
 def model(tensor_x, tensor_w, tensor_b):
     """
-    Accepts three tensors, w, x and b and returns the value for y where y = wx + b.
+    Model a linear function of the form y = wx + b.
 
     :param tensor_x: x tensor
     :param tensor_w: w parameter tensor
@@ -88,6 +88,15 @@ def model(tensor_x, tensor_w, tensor_b):
 
 
 def model_nonlin(tensor_x, tensor_a, tensor_b, tensor_c):
+    """
+    Model a non-linear function of the form y = a * x**b + c.
+
+    :param tensor_x: x tensor
+    :param tensor_a: a parameter tensor
+    :param tensor_b: b parameter tensor
+    :param tensor_c: c parameter tensor
+    :return: the value for the function given the inputs.
+    """
     tensor_y = tensor_a * (tensor_x ** tensor_b)
     #print("tensor_y (%s): %s" % (tensor_y.shape, tensor_y))
     tensor_y = tensor_y + tensor_c
@@ -96,6 +105,15 @@ def model_nonlin(tensor_x, tensor_a, tensor_b, tensor_c):
 
 
 def model_nonlin2(tensor_x, tensor_a, tensor_b, tensor_c):
+    """
+    Model a non-linear function of the form y = a * e**(b*x) + c.
+
+    :param tensor_x: x tensor
+    :param tensor_a: a parameter tensor
+    :param tensor_b: b parameter tensor
+    :param tensor_c: c parameter tensor
+    :return: the value for the function given the inputs.
+    """
     tensor_y = tensor_a * torch.exp(tensor_b * tensor_x)
     #print("tensor_y (%s): %s" % (tensor_y.shape, tensor_y))
     tensor_y = tensor_y + tensor_c
@@ -122,20 +140,41 @@ def loss_fn(tensor_y, tensor_real_y):
 
 
 def dmodel_w(tensor_x):
+    """
+    Calculates the derivative of parameter w in a function of the form y = wx + b.
+
+    :param tensor_x: tensor x
+    :return: the value for the derivative
+    """
     # or alternatively def dmodel_w(tensor_x, tensor_w, tensor_b):
     return tensor_x
 
 
 def dmodel_b():
-    # or alternatively def dmodel_b(tensor_x, tensor_w, tensor_b):
+    """
+    Calculates the derivative of parameter b in a function of the form y = wx + b.
+
+    :return: the value for the derivative.
+    """
     return 1
 
 
 def dloss_m(tensor_y, tensor_real_y):
+    """
+    Calculates the derivative of the loss function for a function of the form y = wx + b.
+
+    :return: the value for the derivative
+    """
     return -2 * (tensor_real_y - tensor_y)
 
 
 def normalize_tensor(tensor):
+    """
+    Normalize a tensor by subtracting its mean and dividing by half of its range.
+
+    :param tensor: tensor to normalize
+    :return: the normalized tensor
+    """
     print("\nNormalization - Original tensor: %s" % tensor)
     print("\tmean: %s - max: %s - min %s" % (torch.mean(tensor), torch.max(tensor), torch.min(tensor)))
     norm_tensor = tensor - torch.mean(tensor)
@@ -147,6 +186,17 @@ def normalize_tensor(tensor):
 
 
 def training(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y):
+    """
+    Trains a linear model by hand.
+
+    :param iterations: number of epochs
+    :param tensor_w: w parameter
+    :param tensor_b: b parameter
+    :param alpha: learning rate
+    :param tensor_x: the independent variable
+    :param tensor_y: the dependent variable
+    :return: fitted values for w and b.
+    """
     print("\n*** TRAINING ***")
     for it in range(iterations):
         # calculate loss
@@ -168,6 +218,17 @@ def training(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y):
 
 
 def training_auto(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y):
+    """
+    Trains a linear model by automatically.
+
+    :param iterations: number of epochs
+    :param tensor_w: w parameter
+    :param tensor_b: b parameter
+    :param alpha: learning rate
+    :param tensor_x: the independent variable
+    :param tensor_y: the dependent variable
+    :return: fitted values for w and b.
+    """
     print("\n*** TRAINING AUTO ***")
     for it in range(iterations):
         if tensor_w.grad is not None:
@@ -191,6 +252,17 @@ def training_auto(iterations, tensor_w, tensor_b, alpha, tensor_x, tensor_y):
 
 
 def training_opt(iterations, tensor_w, tensor_b, tensor_x, tensor_y, optimizer):
+    """
+    Train a linear model automatically and using an optimizer.
+
+    :param iterations: number of epochs
+    :param tensor_w: w parameter
+    :param tensor_b: b parameter
+    :param tensor_x: the independent variable
+    :param tensor_y: the dependent variable
+    :param optimizer: the the optimizer
+    :return: fitted values for w and b.
+    """
     print("\n*** TRAINING OPT ***")
     for it in range(iterations):
         optimizer.zero_grad
@@ -208,6 +280,18 @@ def training_opt(iterations, tensor_w, tensor_b, tensor_x, tensor_y, optimizer):
 
 
 def training_nonlin(iterations, tensor_a, tensor_b, tensor_c, tensor_x, tensor_y, nonlin_function, optimizer):
+    """
+    Train a non linear model automatically and using an optimizer.
+
+    :param iterations: number of epochs
+    :param tensor_a: a parameter
+    :param tensor_b: b parameter
+    :param tensor_c: c parameter
+    :param tensor_x: the independent variable
+    :param tensor_y: the dependent variable
+    :param optimizer: the the optimizer
+    :return: fitted values for a, b and c.
+    """
     print("\n*** TRAINING NON LINEAR ***")
     for it in range(iterations):
         optimizer.zero_grad
@@ -405,7 +489,7 @@ def main(filename):
     '''
     A better fit
     '''
-    # FIRST NON_LINEAR FUNCTION: y = a* x**b + c
+    # FIRST NON_LINEAR FUNCTION: y = a * x**b + c
     tensor_a = torch.tensor([14000.0], requires_grad=True)
     tensor_b = torch.tensor([-1.0], requires_grad=True)
     tensor_c = torch.tensor([-20.0], requires_grad=True)
@@ -420,7 +504,7 @@ def main(filename):
     model_better = model_nonlin(al2_tensor, tensor_a.detach_(), tensor_b.detach(), tensor_c.detach())
     plot_data_set_and_model(al2_tensor, apm2_tensor, model_better, "Better fit: y = a* x**b + c - Test Set 2")
 
-    # SECOND NON_LINEAR FUNCTION: y = a* e**(b*x) + c
+    # SECOND NON_LINEAR FUNCTION: y = a * e**(b*x) + c
     tensor_a = torch.tensor([1500.0], requires_grad=True)
     tensor_b = torch.tensor([-0.06], requires_grad=True)
     tensor_c = torch.tensor([20.0], requires_grad=True)
