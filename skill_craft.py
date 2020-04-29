@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import torch
 import torch.optim as optim
+import torch.nn as nn
 import matplotlib.pyplot as plt
 
 
@@ -308,59 +309,13 @@ def training_nonlin(iterations, tensor_a, tensor_b, tensor_c, tensor_x, tensor_y
     return tensor_a, tensor_b, tensor_c
 
 
-def main(filename):
-    """
-    Main function.
-    :param filename: name of the file to read
-    """
-    '''
-    Your first task is to read the data set from the provided CSV file and put the data into tensors.
-    We will need two tensors: One for the input (the column ActionLatency) and one for the variable we want to predict (the column APM).
-    Implement a function read_csv that takes a file name, and two column names and returns two tensors, one for each of the columns.
-    Split the data into three sets: Use the first 30 entries as test set 1, then split the rest randomly into 20% test set 2 and 80% training set.
-    '''
-    al_tensor, apm_tensor = read_csv(filename, "ActionLatency", "APM")
-
-    # build Set 1 with the first 30 entries (*** TEST SET 1 ***)
-    al1_tensor = al_tensor[:30]
-    apm1_tensor = apm_tensor[:30]
-    print("\nal1_tensor (%s): %s" % (al1_tensor.shape, al1_tensor))
-    print("apm1_tensor (%s): %s" % (apm1_tensor.shape, apm1_tensor))
-
-    # build an intermediate set with all remaining records beyond index 30
-    remaining_al_tensor = al_tensor[30:]
-    remaining_apm_tensor = apm_tensor[30:]
-    # print("remaining_al_tensor (%s): %s" % (remaining_al_tensor.shape, remaining_al_tensor))
-    # print("remaining_apm_tensor (%s): %s" % (remaining_apm_tensor.shape, remaining_apm_tensor))
-
-    # build Set 2 with 20% of remaining data (*** TEST SET 2 ***)
-    # calculate the size of the remaining data  and the index where its first 20% ends
-    remaining_size = remaining_al_tensor.shape[0]
-    twenty_percent_index = (remaining_size * 20) // 100
-    print("\nremaining_size: %s" % remaining_size)
-    print("twenty_percent_index: %s" % twenty_percent_index)
-
-    # create random permutation if integers from 0 to remaining_size
-    random_perm = torch.randperm(remaining_size)
-    print("random_perm (%s): %s" % (random_perm.shape, random_perm))
-
-    al2_tensor = remaining_al_tensor[random_perm[:twenty_percent_index]]
-    apm2_tensor = remaining_apm_tensor[random_perm[:twenty_percent_index]]
-    print("\nal2_tensor shape: %s" % al2_tensor.shape)
-    print("apm2_tensor shape: %s" % apm2_tensor.shape)
-
-    # build Set 3 with 80% of remaining data (*** TRAINING SET ***)
-    al3_tensor = remaining_al_tensor[random_perm[twenty_percent_index:]]
-    apm3_tensor = remaining_apm_tensor[random_perm[twenty_percent_index:]]
-    print("\nal3_tensor (%s): %s" % (al3_tensor.shape, al3_tensor))
-    print("apm3_tensor (%s): %s" % (apm3_tensor.shape, apm3_tensor))
-
+def lab_1(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor):
     '''
     Exploratory Data Analysis
-    Take the test set 1 (with thirty entries), and plot it as a scatterplot with Matplotlib. 
-    Does the data look linear? Try the same with the training set. 
-    What are the maximum, minimum and mean values for APM and ActionLatency? 
-    What is the standard deviation of the two variables? 
+    Take the test set 1 (with thirty entries), and plot it as a scatterplot with Matplotlib.
+    Does the data look linear? Try the same with the training set.
+    What are the maximum, minimum and mean values for APM and ActionLatency?
+    What is the standard deviation of the two variables?
     What is the correlation between the two variables?
     '''
     # scatter plot and line in the same figure
@@ -381,7 +336,8 @@ def main(filename):
 
     plot_data_set_and_model(al1_tensor, apm1_tensor, model(al1_tensor, ols_result[0], ols_result[1]), "Test Set 1")
     plot_data_set_and_model(al2_tensor, apm2_tensor, model(al2_tensor, ols_result[0], ols_result[1]), "Test Set 2")
-    plot_data_set_and_model(al3_tensor, apm3_tensor, model(al3_tensor, ols_result[0], ols_result[1]), "Test Set 3/Training Set")
+    plot_data_set_and_model(al3_tensor, apm3_tensor, model(al3_tensor, ols_result[0], ols_result[1]),
+                            "Test Set 3/Training Set")
 
     '''
     TRAINING
@@ -396,7 +352,7 @@ def main(filename):
 
     # TRAINING - NOT NORMALIZED
     tensor_w, tensor_b = training(1000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
-    #tensor_w, tensor_b = training(10000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
+    # tensor_w, tensor_b = training(10000, tensor_w, tensor_b, 1e-4, al3_tensor, apm3_tensor)
     plot_data_set_and_model(al3_tensor, apm3_tensor, model(al3_tensor, tensor_w, tensor_b), "X NOT Normalized")
 
     # TRAINING - NORMALIZED
@@ -404,7 +360,8 @@ def main(filename):
     tensor_w_norm = tensor_w.clone().detach()
     tensor_b_norm = tensor_b.clone().detach()
     tensor_w_norm, tensor_b_norm = training(1000, tensor_w_norm, tensor_b_norm, 1e-1, al3_tensor_norm, apm3_tensor)
-    plot_data_set_and_model(al3_tensor_norm, apm3_tensor, model(al3_tensor_norm, tensor_w_norm, tensor_b_norm), "X Normalized")
+    plot_data_set_and_model(al3_tensor_norm, apm3_tensor, model(al3_tensor_norm, tensor_w_norm, tensor_b_norm),
+                            "X Normalized")
 
     # LOSS
     tensor_y_learned = model(al3_tensor, tensor_w, tensor_b)
@@ -434,7 +391,6 @@ def main(filename):
     print("\nLOSS for TEST SET 1 (Auto): %s " % learned_model_loss)
     plot_data_set_and_model(al1_tensor, apm1_tensor, model_auto, "Auto - Test Set 1")
 
-
     model_auto = model(al2_tensor, tensor_w_auto.detach(), tensor_b_auto.detach())
     learned_model_loss = loss_fn(model_auto, apm2_tensor)
     print("\nLOSS for TEST SET 2 (Auto): %s " % learned_model_loss)
@@ -444,7 +400,7 @@ def main(filename):
     tensor_w_opt = torch.tensor([-2.0], requires_grad=True)
     tensor_b_opt = torch.tensor([230.0], requires_grad=True)
     tensor_w_opt, tensor_b_opt = training_opt(1000, tensor_w_opt, tensor_b_opt, al3_tensor, apm3_tensor,
-                                                  optim.SGD([tensor_w_opt, tensor_b_opt], lr=1e-4))
+                                              optim.SGD([tensor_w_opt, tensor_b_opt], lr=1e-4))
 
     model_opt = model(al1_tensor, tensor_w_opt.detach(), tensor_b_opt.detach())
     learned_model_loss = loss_fn(model_opt, apm1_tensor)
@@ -460,7 +416,7 @@ def main(filename):
     tensor_w_opt = torch.tensor([-2.0], requires_grad=True)
     tensor_b_opt = torch.tensor([230.0], requires_grad=True)
     tensor_w_opt, tensor_b_opt = training_opt(1000, tensor_w_opt, tensor_b_opt, al3_tensor, apm3_tensor,
-                                                  optim.Adam([tensor_w_opt, tensor_b_opt], lr=1e-4))
+                                              optim.Adam([tensor_w_opt, tensor_b_opt], lr=1e-4))
 
     model_opt = model(al1_tensor, tensor_w_opt.detach(), tensor_b_opt.detach())
     learned_model_loss = loss_fn(model_opt, apm1_tensor)
@@ -474,7 +430,7 @@ def main(filename):
 
     # Optimization: Adam SCALED
     tensor_w_opt, tensor_b_opt = training_opt(1000, tensor_w_opt, tensor_b_opt, al3_tensor_norm, apm3_tensor,
-                                                  optim.Adam([tensor_w_opt, tensor_b_opt], lr=1e-4))
+                                              optim.Adam([tensor_w_opt, tensor_b_opt], lr=1e-4))
 
     model_opt = model(al1_tensor, tensor_w_opt.detach(), tensor_b_opt.detach())
     learned_model_loss = loss_fn(model_opt, apm1_tensor)
@@ -526,6 +482,107 @@ def main(filename):
     learned_model_loss = loss_fn(model_better, apm2_tensor)
     print("\nLOSS for TEST SET 2 (Better Fit F2): %s " % learned_model_loss)
     plot_data_set_and_model(al2_tensor, apm2_tensor, model_better, "Better fit: y = a* e**(b*x) + c - Test Set 2 ")
+
+
+class SkillCraftNN(nn.Module):
+
+    def __init__(self):
+        super.__init__()
+        self.hidden_linear = nn.Linear(1, 13)
+        self.hidden_activation = nn.Sigmoid()
+        self.output_linear = nn.Linear(13, 1)
+
+    def forward(self, input):
+        hidden_t = self.hidden_linear(input)
+        activated_t = self.hidden_activation(hidden_t)
+        output_t = self.output_linear(activated_t)
+        return output_t
+
+
+def train_nn(iterations, model, optimizer, loss_fn, tensor_x, tensor_y, inputs):
+    print("\n*** TRAINING NN***")
+    print("parameters: %s" % list(model.parameters()))
+
+    print("\ntensor_x (%s): %s" % (tensor_x.shape, tensor_x))
+    tensor_x_reshaped = tensor_x.view(-1, inputs)
+    print("\ntensor_x_reshaped (%s): %s" % (tensor_x_reshaped.shape, tensor_x_reshaped))
+
+    for it in range(iterations):
+        tensor_y_pred = model(tensor_x_reshaped)
+        tensor_y_pred_reshaped = tensor_y_pred.view(-1, inputs)
+        loss = loss_fn(tensor_y.view(-1, inputs), tensor_y_pred_reshaped)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        print("N: %s\t | Loss: %f\t" % (it, loss))
+
+    print("\nparameters: %s" % list(model.parameters()))
+
+
+def lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor):
+
+    model = nn.Linear(1, 1)
+    optimizer = optim.Adam(model.parameters(), lr=1e-1)
+    loss_fn = nn.MSELoss()
+    train_nn(5000, model, optimizer, loss_fn, al3_tensor, apm3_tensor, 1)
+
+    print("\nal1_tensor (%s): %s" % (al1_tensor.shape, al1_tensor))
+    y = model(al1_tensor.view(-1, 1))
+    print("\ny (%s): %s" % (y.shape, y))
+    plot_data_set_and_model(al1_tensor, apm1_tensor, y.detach().numpy(), "NN 1")
+
+
+def main(filename):
+    """
+    Main function.
+    :param filename: name of the file to read
+    """
+    '''
+    Your first task is to read the data set from the provided CSV file and put the data into tensors.
+    We will need two tensors: One for the input (the column ActionLatency) and one for the variable we want to predict (the column APM).
+    Implement a function read_csv that takes a file name, and two column names and returns two tensors, one for each of the columns.
+    Split the data into three sets: Use the first 30 entries as test set 1, then split the rest randomly into 20% test set 2 and 80% training set.
+    '''
+    al_tensor, apm_tensor = read_csv(filename, "ActionLatency", "APM")
+
+    # build Set 1 with the first 30 entries (*** TEST SET 1 ***)
+    al1_tensor = al_tensor[:30]
+    apm1_tensor = apm_tensor[:30]
+    print("\nal1_tensor (%s): %s" % (al1_tensor.shape, al1_tensor))
+    print("apm1_tensor (%s): %s" % (apm1_tensor.shape, apm1_tensor))
+
+    # build an intermediate set with all remaining records beyond index 30
+    remaining_al_tensor = al_tensor[30:]
+    remaining_apm_tensor = apm_tensor[30:]
+    # print("remaining_al_tensor (%s): %s" % (remaining_al_tensor.shape, remaining_al_tensor))
+    # print("remaining_apm_tensor (%s): %s" % (remaining_apm_tensor.shape, remaining_apm_tensor))
+
+    # build Set 2 with 20% of remaining data (*** TEST SET 2 ***)
+    # calculate the size of the remaining data  and the index where its first 20% ends
+    remaining_size = remaining_al_tensor.shape[0]
+    twenty_percent_index = (remaining_size * 20) // 100
+    print("\nremaining_size: %s" % remaining_size)
+    print("twenty_percent_index: %s" % twenty_percent_index)
+
+    # create random permutation if integers from 0 to remaining_size
+    random_perm = torch.randperm(remaining_size)
+    print("random_perm (%s): %s" % (random_perm.shape, random_perm))
+
+    al2_tensor = remaining_al_tensor[random_perm[:twenty_percent_index]]
+    apm2_tensor = remaining_apm_tensor[random_perm[:twenty_percent_index]]
+    print("\nal2_tensor shape: %s" % al2_tensor.shape)
+    print("apm2_tensor shape: %s" % apm2_tensor.shape)
+
+    # build Set 3 with 80% of remaining data (*** TRAINING SET ***)
+    al3_tensor = remaining_al_tensor[random_perm[twenty_percent_index:]]
+    apm3_tensor = remaining_apm_tensor[random_perm[twenty_percent_index:]]
+    print("\nal3_tensor (%s): %s" % (al3_tensor.shape, al3_tensor))
+    print("apm3_tensor (%s): %s" % (apm3_tensor.shape, apm3_tensor))
+
+    #lab_1(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
+    lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
 
     
 if __name__ == "__main__":
