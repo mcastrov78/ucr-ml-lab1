@@ -72,6 +72,24 @@ def plot_data_set_and_model(al_tensor, apm_tensor, model=None, name="Figure"):
     plt.show()
 
 
+def plot_data_set_and_function(al_tensor, apm_tensor, new_x_tensor, new_y_tensor, name="Figure"):
+    """
+    Plot a given test set.
+
+    :param al_tensor: tensor X
+    :param apm_tensor: tensor y
+    :param model: model function
+    :param name: figure name
+    """
+    print("\n*** plot_data_set_and_model: %s ***" % name)
+    plt.figure(num=name)
+    plt.scatter(al_tensor, apm_tensor)
+    plt.plot(new_x_tensor, new_y_tensor, color="red")
+    plt.xlabel("Action Latency")
+    plt.ylabel("APM")
+    plt.show()
+
+
 def model(tensor_x, tensor_w, tensor_b):
     """
     Model a linear function of the form y = wx + b.
@@ -484,13 +502,17 @@ def lab_1(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tenso
     plot_data_set_and_model(al2_tensor, apm2_tensor, model_better, "Better fit: y = a* e**(b*x) + c - Test Set 2 ")
 
 
+''' -------------------------- LAB 2 -------------------------------------- '''
 class SkillCraftNN(nn.Module):
 
-    def __init__(self):
-        super.__init__()
-        self.hidden_linear = nn.Linear(1, 13)
-        self.hidden_activation = nn.Sigmoid()
-        self.output_linear = nn.Linear(13, 1)
+    def __init__(self, i, h, o):
+        super(SkillCraftNN, self).__init__()
+        print("SkillCraftNN i: %s - h: %s - o: %s" % (i, h, o))
+        self.hidden_linear = nn.Linear(i, h)
+        #self.hidden_activation = nn.Sigmoid()
+        self.hidden_activation = nn.ReLU()
+        #self.hidden_activation = nn.Tanh()
+        self.output_linear = nn.Linear(h, o)
 
     def forward(self, input):
         hidden_t = self.hidden_linear(input)
@@ -501,13 +523,11 @@ class SkillCraftNN(nn.Module):
 
 def train_nn(iterations, model, optimizer, loss_fn, tensor_x, tensor_y, inputs):
     print("\n*** TRAINING NN***")
-    print("parameters: %s" % list(model.parameters()))
-
     print("\ntensor_x (%s): %s" % (tensor_x.shape, tensor_x))
     tensor_x_reshaped = tensor_x.view(-1, inputs)
     print("\ntensor_x_reshaped (%s): %s" % (tensor_x_reshaped.shape, tensor_x_reshaped))
 
-    for it in range(iterations):
+    for it in range(1, iterations + 1):
         tensor_y_pred = model(tensor_x_reshaped)
         tensor_y_pred_reshaped = tensor_y_pred.view(-1, inputs)
         loss = loss_fn(tensor_y.view(-1, inputs), tensor_y_pred_reshaped)
@@ -516,22 +536,57 @@ def train_nn(iterations, model, optimizer, loss_fn, tensor_x, tensor_y, inputs):
         loss.backward()
         optimizer.step()
 
-        print("N: %s\t | Loss: %f\t" % (it, loss))
+        if it % 100 == 0: print("N: %s\t | Loss: %f\t" % (it, loss))
 
-    print("\nparameters: %s" % list(model.parameters()))
+#    print("\nparameters: %s" % list(model.parameters()))
 
 
 def lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor):
-
+    ''' LINEAR '''
     model = nn.Linear(1, 1)
+    # LAB NOTE: 1e-4 is too slow, 1e-1 is a lot better
     optimizer = optim.Adam(model.parameters(), lr=1e-1)
     loss_fn = nn.MSELoss()
+    '''
+    # LAB NOTE: 1000 iterations is not enough (Loss: 3839.005127), 5000 seems good  (Loss: 1302.502563)
     train_nn(5000, model, optimizer, loss_fn, al3_tensor, apm3_tensor, 1)
 
     print("\nal1_tensor (%s): %s" % (al1_tensor.shape, al1_tensor))
     y = model(al1_tensor.view(-1, 1))
     print("\ny (%s): %s" % (y.shape, y))
     plot_data_set_and_model(al1_tensor, apm1_tensor, y.detach().numpy(), "NN 1")
+    '''
+
+    ''' NEW NEURAL NETWORK '''
+    # Sigmoid 1 - Loss: 2740.765381
+    # 2 - Loss: 2685.651367
+    # 5 - Loss: 2670.873291
+    # 10 - Loss: 2671.457764
+
+    # ReLU 1 - Loss: 1194.804077
+    # 2 - Loss: 1198.752441
+    # 5 - Loss: 1016.576050
+    # 10 - Loss: 990.611328
+
+    # Tanh 1 - Loss: 2762.701416
+    # 2 - Loss: 2706.364746
+    # 5 - Loss: 2642.508545
+    # 10 - Loss: 2600.437988
+
+    model = SkillCraftNN(1, 10, 1)
+    print("model: %s" % model)
+    optimizer = optim.Adam(model.parameters(), lr=1e-1)
+    train_nn(1000, model, optimizer, loss_fn, al3_tensor, apm3_tensor, 1)
+    print("model: %s" % model)
+
+    print("\nal1_tensor (%s): %s" % (al1_tensor.shape, al1_tensor))
+    y = model(al1_tensor.view(-1, 1))
+    print("\ny (%s): %s" % (y.shape, y))
+    plot_data_set_and_model(al1_tensor, apm1_tensor, y.detach().numpy(), "NN 1")
+
+    linear_x = torch.tensor(np.linspace(al1_tensor.min(), al1_tensor.max(), 1000), dtype=torch.float)
+    linear_x_y = model(linear_x.view(-1, 1))
+    plot_data_set_and_function(al1_tensor, apm1_tensor, linear_x, linear_x_y.detach().numpy(), "NN 1")
 
 
 def main(filename):
