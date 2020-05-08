@@ -7,21 +7,6 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 
 
-def read_csv(filename, col_x, col_y):
-    """
-    Read CSV file.
-
-    :param filename: name of the file to read
-    :param col_x: name of column X
-    :param col_y: name of column Y
-    :return: a tuple with two tensors, one per column
-    """
-    data = pd.read_csv(filename)
-    x = torch.tensor(data[col_x])
-    y = torch.tensor(data[col_y])
-    return x, y
-
-
 def read_csv_enhanced(filename, columns):
     """
     Read CSV file.
@@ -649,7 +634,10 @@ def main(filename):
     Implement a function read_csv that takes a file name, and two column names and returns two tensors, one for each of the columns.
     Split the data into three sets: Use the first 30 entries as test set 1, then split the rest randomly into 20% test set 2 and 80% training set.
     '''
-    al_tensor, apm_tensor = read_csv(filename, "ActionLatency", "APM")
+    al_tensor, apm_tensor = read_csv_enhanced(filename, ("APM", "ActionLatency"))
+    al_tensor = al_tensor.squeeze()
+    print("\nal_tensor (%s): %s" % (al_tensor.shape, al_tensor))
+    print("apm_tensor (%s): %s" % (apm_tensor.shape, apm_tensor))
 
     # build Set 1 with the first 30 entries (*** TEST SET 1 ***)
     al1_tensor = al_tensor[:30]
@@ -691,7 +679,7 @@ def main(filename):
     columns_tensor, apm_tensor = read_csv_enhanced(filename, ("APM", "ActionLatency", "TotalMapExplored", "WorkersMade",
                                                      "UniqueUnitsMade", "ComplexUnitsMade", "ComplexAbilitiesUsed"))
     print("\ncolumns_tensor (%s): %s" % (columns_tensor.shape, columns_tensor))
-    print("\napm_tensor (%s): %s" % (apm_tensor.shape, apm_tensor))
+    print("apm_tensor (%s): %s" % (apm_tensor.shape, apm_tensor))
 
     
 if __name__ == "__main__":
