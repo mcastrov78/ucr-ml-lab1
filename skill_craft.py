@@ -22,6 +22,23 @@ def read_csv(filename, col_x, col_y):
     return x, y
 
 
+def read_csv_enhanced(filename, columns):
+    """
+    Read CSV file.
+
+    :param filename: name of the file to read
+    :param columns: name of columns to read
+    :return: two tensors, the second one contains the first column data, the first one all the other columns
+    """
+    data = pd.read_csv(filename)
+    y = torch.tensor(data[columns[0]])
+    x = torch.empty(len(data[columns[0]]), len(columns) - 1)
+    for n, column in enumerate(columns[1:]):
+        print("column %s '%s'" % (n, column))
+        x[:,n] = torch.tensor(data[column])
+    return x, y
+
+
 def ols(tensor_x, tensor_y):
     """
     Calculate Ordinary Least Squares for a function of the form y = wx + b.
@@ -669,7 +686,12 @@ def main(filename):
     print("apm3_tensor (%s): %s" % (apm3_tensor.shape, apm3_tensor))
 
     #lab_1(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
-    lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
+    #lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
+
+    columns_tensor, apm_tensor = read_csv_enhanced(filename, ("APM", "ActionLatency", "TotalMapExplored", "WorkersMade",
+                                                     "UniqueUnitsMade", "ComplexUnitsMade", "ComplexAbilitiesUsed"))
+    print("\ncolumns_tensor (%s): %s" % (columns_tensor.shape, columns_tensor))
+    print("\napm_tensor (%s): %s" % (apm_tensor.shape, apm_tensor))
 
     
 if __name__ == "__main__":
