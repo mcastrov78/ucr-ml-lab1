@@ -510,16 +510,19 @@ def lab_1(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tenso
 
 
 ''' -------------------------- LAB 2 -------------------------------------- '''
+
+
 class SkillCraftNN(nn.Module):
 
-    def __init__(self, i, h, o):
+    def __init__(self, input_n, hidden_n, output_n, activation_fn):
         super(SkillCraftNN, self).__init__()
-        print("SkillCraftNN i: %s - h: %s - o: %s" % (i, h, o))
-        self.hidden_linear = nn.Linear(i, h)
+        print("\n*** SkillCraftNN i: %s - h: %s - o: %s ***" % (input_n, hidden_n, output_n))
+        self.hidden_linear = nn.Linear(input_n, hidden_n)
         #self.hidden_activation = nn.Sigmoid()
-        self.hidden_activation = nn.ReLU()
+        #self.hidden_activation = nn.ReLU()
         #self.hidden_activation = nn.Tanh()
-        self.output_linear = nn.Linear(h, o)
+        self.hidden_activation = activation_fn
+        self.output_linear = nn.Linear(hidden_n, output_n)
 
     def forward(self, input):
         hidden_t = self.hidden_linear(input)
@@ -528,16 +531,16 @@ class SkillCraftNN(nn.Module):
         return output_t
 
 
-def train_nn(iterations, model, optimizer, loss_fn, tensor_x, tensor_y, inputs):
-    print("\n*** TRAINING NN***")
+def train_nn(iterations, nn_model, optimizer, nn_loss_fn, tensor_x, tensor_y, input_n, output_n):
+    print("\n*** TRAINING NN ***")
     print("\ntensor_x (%s): %s" % (tensor_x.shape, tensor_x))
-    tensor_x_reshaped = tensor_x.view(-1, inputs)
+    tensor_x_reshaped = tensor_x.view(-1, input_n)
     print("\ntensor_x_reshaped (%s): %s" % (tensor_x_reshaped.shape, tensor_x_reshaped))
 
     for it in range(1, iterations + 1):
-        tensor_y_pred = model(tensor_x_reshaped)
-        tensor_y_pred_reshaped = tensor_y_pred.view(-1, inputs)
-        loss = loss_fn(tensor_y.view(-1, inputs), tensor_y_pred_reshaped)
+        tensor_y_pred = nn_model(tensor_x_reshaped)
+        tensor_y_pred_reshaped = tensor_y_pred.view(-1, output_n)
+        loss = nn_loss_fn(tensor_y.view(-1, output_n), tensor_y_pred_reshaped)
 
         optimizer.zero_grad()
         loss.backward()
@@ -550,77 +553,95 @@ def train_nn(iterations, model, optimizer, loss_fn, tensor_x, tensor_y, inputs):
 
 def lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor):
     ''' LINEAR '''
-    model = nn.Linear(1, 1)
+    nn_model = nn.Linear(1, 1)
     # LAB NOTE: 1e-4 is too slow, 1e-1 is a lot better
-    optimizer = optim.Adam(model.parameters(), lr=1e-1)
-    loss_fn = nn.MSELoss()
+    optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
+    nn_loss_fn = nn.MSELoss()
 
     # LAB NOTE: 1000 iterations is not enough (Loss: 3839.005127), 5000 seems good  (Loss: 1302.502563)
-    train_nn(5000, model, optimizer, loss_fn, al3_tensor, apm3_tensor, 1)
+    train_nn(5000, nn_model, optimizer, nn_loss_fn, al3_tensor, apm3_tensor, 1, 1)
 
-    model_y = model(al3_tensor.view(-1, 1))
-    model_loss = loss_fn(model_y, apm3_tensor.view(-1, 1))
-    print("\nLOSS for TEST SET 3 (NN1): %s " % model_loss)
-    fn_x_tensor = torch.tensor(np.linspace(al3_tensor.min(), al3_tensor.max(), 1000), dtype=torch.float)
-    fn_y_tensor = model(fn_x_tensor.view(-1, 1))
-    plot_data_set_and_function(al3_tensor, apm3_tensor, fn_x_tensor, fn_y_tensor.detach().numpy(), "NN 1 - Test Set 3")
+    # model each Test Set and calculate loss
+    nn_model_test_set(al3_tensor, apm3_tensor, nn_model, nn_loss_fn, "NN1 - TEST SET 3")
+    nn_plot_test_test(al3_tensor, apm3_tensor, nn_model, "NN1 - TEST SET 3")
 
-    model_y = model(al1_tensor.view(-1, 1))
-    model_loss = loss_fn(model_y, apm1_tensor.view(-1, 1))
-    print("\nLOSS for TEST SET 1 (NN1): %s " % model_loss)
-    fn_x_tensor = torch.tensor(np.linspace(al1_tensor.min(), al1_tensor.max(), 1000), dtype=torch.float)
-    fn_y_tensor = model(fn_x_tensor.view(-1, 1))
-    plot_data_set_and_function(al1_tensor, apm1_tensor, fn_x_tensor, fn_y_tensor.detach().numpy(), "NN 1 - Test Set 1")
+    nn_model_test_set(al1_tensor, apm1_tensor, nn_model, nn_loss_fn, "NN1 - TEST SET 1")
+    nn_plot_test_test(al1_tensor, apm1_tensor, nn_model, "NN1 - TEST SET 1")
 
-    model_y = model(al2_tensor.view(-1, 1))
-    model_loss = loss_fn(model_y, apm2_tensor.view(-1, 1))
-    print("\nLOSS for TEST SET 2 (NN1): %s " % model_loss)
-    fn_x_tensor = torch.tensor(np.linspace(al2_tensor.min(), al2_tensor.max(), 1000), dtype=torch.float)
-    fn_y_tensor = model(fn_x_tensor.view(-1, 1))
-    plot_data_set_and_function(al2_tensor, apm2_tensor, fn_x_tensor, fn_y_tensor.detach().numpy(), "NN 1 - Test Set 2")
+    nn_model_test_set(al2_tensor, apm2_tensor, nn_model, nn_loss_fn, "NN1 - TEST SET 2")
+    nn_plot_test_test(al2_tensor, apm2_tensor, nn_model, "NN1 - TEST SET 2")
 
     ''' NEW NEURAL NETWORK '''
-    # Sigmoid 1 - Loss: 2740.765381
+    # Sigmoid
+    # 1 - Loss: 2740.765381
     # 2 - Loss: 2685.651367
     # 5 - Loss: 2670.873291
     # 10 - Loss: 2671.457764
+    nn_model = SkillCraftNN(1, 10, 1, nn.Sigmoid())
+    print("\nmodel: %s" % nn_model)
+    optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
+    train_nn(1000, nn_model, optimizer, nn_loss_fn, al3_tensor, apm3_tensor, 1, 1)
 
-    # ReLU 1 - Loss: 1194.804077
-    # 2 - Loss: 1198.752441
-    # 5 - Loss: 1016.576050
-    # 10 - Loss: 990.611328
+    nn_model_test_set(al3_tensor, apm3_tensor, nn_model, nn_loss_fn, "NN2 Sigmoid - TEST SET 3")
+    nn_model_test_set(al1_tensor, apm1_tensor, nn_model, nn_loss_fn, "NN2 Sigmoid - TEST SET 1")
+    nn_model_test_set(al2_tensor, apm2_tensor, nn_model, nn_loss_fn, "NN2 Sigmoid - TEST SET 2")
 
-    # Tanh 1 - Loss: 2762.701416
+    # Tanh
+    # 1 - Loss: 2762.701416
     # 2 - Loss: 2706.364746
     # 5 - Loss: 2642.508545
     # 10 - Loss: 2600.437988
+    nn_model = SkillCraftNN(1, 10, 1, nn.Tanh())
+    print("\nmodel: %s" % nn_model)
+    optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
+    train_nn(1000, nn_model, optimizer, nn_loss_fn, al3_tensor, apm3_tensor, 1, 1)
 
-    model = SkillCraftNN(1, 10, 1)
-    print("model: %s" % model)
-    optimizer = optim.Adam(model.parameters(), lr=1e-1)
-    train_nn(1000, model, optimizer, loss_fn, al3_tensor, apm3_tensor, 1)
-    print("model: %s" % model)
+    nn_model_test_set(al3_tensor, apm3_tensor, nn_model, nn_loss_fn, "NN2 Tanh - TEST SET 3")
+    nn_model_test_set(al1_tensor, apm1_tensor, nn_model, nn_loss_fn, "NN2 Tanh - TEST SET 1")
+    nn_model_test_set(al2_tensor, apm2_tensor, nn_model, nn_loss_fn, "NN2 Tanh - TEST SET 2")
 
-    model_y = model(al3_tensor.view(-1, 1))
-    model_loss = loss_fn(model_y, apm3_tensor.view(-1, 1))
-    print("\nLOSS for TEST SET 3 (NN2): %s " % model_loss)
-    fn_x_tensor = torch.tensor(np.linspace(al3_tensor.min(), al3_tensor.max(), 1000), dtype=torch.float)
-    fn_y_tensor = model(fn_x_tensor.view(-1, 1))
-    plot_data_set_and_function(al3_tensor, apm3_tensor, fn_x_tensor, fn_y_tensor.detach().numpy(), "NN 2 - Test Set 3")
+    # ReLU
+    # 1 - Loss: 1194.804077
+    # 2 - Loss: 1198.752441
+    # 5 - Loss: 1016.576050
+    # 10 - Loss: 990.611328
+    nn_model = SkillCraftNN(1, 10, 1, nn.ReLU())
+    print("\nmodel: %s" % nn_model)
+    optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
+    train_nn(1000, nn_model, optimizer, nn_loss_fn, al3_tensor, apm3_tensor, 1, 1)
 
-    model_y = model(al1_tensor.view(-1, 1))
-    model_loss = loss_fn(model_y, apm1_tensor.view(-1, 1))
-    print("\nLOSS for TEST SET 1 (NN2): %s " % model_loss)
-    fn_x_tensor = torch.tensor(np.linspace(al1_tensor.min(), al1_tensor.max(), 1000), dtype=torch.float)
-    fn_y_tensor = model(fn_x_tensor.view(-1, 1))
-    plot_data_set_and_function(al1_tensor, apm1_tensor, fn_x_tensor, fn_y_tensor.detach().numpy(), "NN 2 - Test Set 1")
+    nn_model_test_set(al3_tensor, apm3_tensor, nn_model, nn_loss_fn, "NN2 ReLU - TEST SET 3")
+    nn_plot_test_test(al3_tensor, apm3_tensor, nn_model, "NN2 ReLU - TEST SET 3")
 
-    model_y = model(al2_tensor.view(-1, 1))
-    model_loss = loss_fn(model_y, apm2_tensor.view(-1, 1))
-    print("\nLOSS for TEST SET 2 (NN2): %s " % model_loss)
-    fn_x_tensor = torch.tensor(np.linspace(al2_tensor.min(), al2_tensor.max(), 1000), dtype=torch.float)
-    fn_y_tensor = model(fn_x_tensor.view(-1, 1))
-    plot_data_set_and_function(al2_tensor, apm2_tensor, fn_x_tensor, fn_y_tensor.detach().numpy(), "NN 2 - Test Set 2")
+    nn_model_test_set(al1_tensor, apm1_tensor, nn_model, nn_loss_fn, "NN2 ReLU - TEST SET 1")
+    nn_plot_test_test(al1_tensor, apm1_tensor, nn_model, "NN2 ReLU - TEST SET 1")
+
+    nn_model_test_set(al2_tensor, apm2_tensor, nn_model, nn_loss_fn, "NN2 ReLU - TEST SET 2")
+    nn_plot_test_test(al2_tensor, apm2_tensor, nn_model, "NN2 ReLU - TEST SET 2")
+
+    # Tanh 2000 -> SLOW !!! and ineffective
+    # 1 - Loss:
+    nn_model = SkillCraftNN(1, 2000, 1, nn.Tanh())
+    print("\nmodel: %s" % nn_model)
+    optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
+    train_nn(1000, nn_model, optimizer, nn_loss_fn, al3_tensor, apm3_tensor, 1, 1)
+
+    nn_model_test_set(al3_tensor, apm3_tensor, nn_model, nn_loss_fn, "NN2 Tanh - TEST SET 3")
+    nn_model_test_set(al1_tensor, apm1_tensor, nn_model, nn_loss_fn, "NN2 Tanh - TEST SET 1")
+    nn_model_test_set(al2_tensor, apm2_tensor, nn_model, nn_loss_fn, "NN2 Tanh - TEST SET 2")
+
+
+def nn_model_test_set(al_tensor, apm_tensor, nn_model, nn_loss_fn, test_set_name):
+    model_y = nn_model(al_tensor.view(-1, 1))
+    model_loss = nn_loss_fn(model_y, apm_tensor.view(-1, 1))
+    print("\nLOSS for %s (NN1): %s " % (test_set_name, model_loss))
+
+
+def nn_plot_test_test(al_tensor, apm_tensor, nn_model, test_set_name):
+    fn_x_tensor = torch.tensor(np.linspace(al_tensor.min(), al_tensor.max(), 1000), dtype=torch.float)
+    fn_y_tensor = nn_model(fn_x_tensor.view(-1, 1))
+    plot_data_set_and_function(al_tensor, apm_tensor, fn_x_tensor, fn_y_tensor.detach().numpy(),
+                               "NN 1 - %s" % test_set_name)
 
 
 def main(filename):
@@ -681,6 +702,17 @@ def main(filename):
     print("\ncolumns_tensor (%s): %s" % (columns_tensor.shape, columns_tensor))
     print("apm_tensor (%s): %s" % (apm_tensor.shape, apm_tensor))
 
-    
+    nn_model = SkillCraftNN(6, 10, 1, nn.ReLU())
+    optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
+    nn_loss_fn = nn.MSELoss()
+    print("\nmodel: %s" % nn_model)
+    # LAB NOTE: 5000 gives almost the same as 1000
+    train_nn(1000, nn_model, optimizer, nn_loss_fn, columns_tensor, apm_tensor, 6, 1)
+
+    nn_model_y = nn_model(columns_tensor)
+    nn_model_loss = loss_fn(nn_model_y, apm_tensor.view(-1, 1))
+    print("\nLOSS: %s " % nn_model_loss)
+
+
 if __name__ == "__main__":
     main(sys.argv[1])
