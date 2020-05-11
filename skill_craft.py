@@ -15,6 +15,7 @@ def read_csv_enhanced(filename, columns):
     :param columns: name of columns to read
     :return: two tensors, the second one contains the first column data, the first one all the other columns
     """
+    print("\nREADING CSV %s ..." % filename)
     data = pd.read_csv(filename)
     y = torch.tensor(data[columns[0]])
     x = torch.empty(len(data[columns[0]]), len(columns) - 1)
@@ -22,6 +23,42 @@ def read_csv_enhanced(filename, columns):
         print("column %s '%s'" % (n, column))
         x[:,n] = torch.tensor(data[column])
     return x, y
+
+
+def create_test_sets(x_tensor, apm_tensor):
+    print("\nCREATING TEST SETS ...")
+    # build Set 1 with the first 30 entries (*** TEST SET 1 ***)
+    x_tensor_1 = x_tensor[:30]
+    y_tensor_1 = apm_tensor[:30]
+    print("x_tensor_1 (%s): %s" % (x_tensor_1.shape, x_tensor_1))
+    print("y_tensor_1 (%s): %s" % (y_tensor_1.shape, y_tensor_1))
+
+    # build an intermediate set with all remaining records beyond index 30
+    remaining_x_tensor = x_tensor[30:]
+    remaining_y_tensor = apm_tensor[30:]
+
+    # build Set 2 with 20% of remaining data (*** TEST SET 2 ***)
+    # calculate the size of the remaining data  and the index where its first 20% ends
+    remaining_size = remaining_x_tensor.shape[0]
+    twenty_percent_index = (remaining_size * 20) // 100
+
+    # create random permutation if integers from 0 to remaining_size
+    random_perm = torch.randperm(remaining_size)
+    print("\nrandom_perm (%s): %s" % (random_perm.shape, random_perm))
+    #print("remaining_x_tensor (%s): %s" % (remaining_x_tensor.shape[0], remaining_x_tensor))
+
+    x_tensor_2 = remaining_x_tensor[random_perm[:twenty_percent_index]]
+    y_tensor_2 = remaining_y_tensor[random_perm[:twenty_percent_index]]
+    print("\nx_tensor_2 (%s): %s ..." % (x_tensor_2.shape, x_tensor_2[:10]))
+    print("y_tensor_2 (%s): %s ..." % (y_tensor_2.shape, y_tensor_2[:10]))
+
+    # build Set 3 with 80% of remaining data (*** TEST SET 3 / TRAINING SET ***)
+    x_tensor_3 = remaining_x_tensor[random_perm[twenty_percent_index:]]
+    y_tensor_3 = remaining_y_tensor[random_perm[twenty_percent_index:]]
+    print("\nx_tensor_3 (%s): %s" % (x_tensor_3.shape, x_tensor_3))
+    print("y_tensor_3 (%s): %s" % (y_tensor_3.shape, y_tensor_3))
+
+    return x_tensor_1, y_tensor_1, x_tensor_2, y_tensor_2, x_tensor_3, y_tensor_3
 
 
 def ols(tensor_x, tensor_y):
@@ -545,7 +582,17 @@ def train_nn(iterations, nn_model, optimizer, nn_loss_fn, tensor_x, tensor_y, in
 
         if it % 100 == 0: print("N: %s\t | Loss: %f\t" % (it, loss))
 
-#    print("\nparameters: %s" % list(model.parameters()))
+
+def nn_model_test_set(al_tensor, apm_tensor, nn_model, nn_loss_fn, test_set_name):
+    model_y = nn_model(al_tensor.view(-1, 1))
+    model_loss = nn_loss_fn(model_y, apm_tensor.view(-1, 1))
+    print("\nLOSS for %s (NN1): %s " % (test_set_name, model_loss))
+
+
+def nn_plot_test_test(al_tensor, apm_tensor, nn_model, test_set_name):
+    fn_x_tensor = torch.tensor(np.linspace(al_tensor.min(), al_tensor.max(), 1000), dtype=torch.float)
+    fn_y_tensor = nn_model(fn_x_tensor.view(-1, 1))
+    plot_data_set_and_function(al_tensor, apm_tensor, fn_x_tensor, fn_y_tensor.detach().numpy(), test_set_name)
 
 
 def lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor):
@@ -640,61 +687,45 @@ def lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tenso
     nn_model_test_set(al1_tensor, apm1_tensor, nn_model, nn_loss_fn, "NN2 Tanh - TEST SET 1")
     nn_model_test_set(al2_tensor, apm2_tensor, nn_model, nn_loss_fn, "NN2 Tanh - TEST SET 2")
 
+
+def lab_2_more_features(col_tensor, apm_tensor, col1_tensor, apm1_tensor, col2_tensor, apm2_tensor, col3_tensor, apm3_tensor):
+    """
+    Lab2. MORE FEATURES.
+    :param col_tensor: 
+    :param apm_tensor: 
+    :param col1_tensor: 
+    :param apm1_tensor: 
+    :param col2_tensor: 
+    :param apm2_tensor: 
+    :param col3_tensor: 
+    :param apm3_tensor: 
+    :return: notjing
+    """
     '''
     ... read all data for APM, ActionLatency, TotalMapExplored, WorkersMade, UniqueUnitsMade, ComplexUnitsMade and 
     ComplexAbilitiesUsed into a tensor. Use the first column as your y tensor, and the other columns as your x tensor, 
     and build a neural network that accepts these 6 inputs and predicts the y-values. Again try several different 
     neural network architectures and report which one produced the best results.
     '''
+    nn_model = SkillCraftNN(6, 10, 1, nn.ReLU())
+    optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
+    nn_loss_fn = nn.MSELoss()
+    print("\nmodel: %s" % nn_model)
 
+    # LAB NOTE: 1000 gives almost the same as 1000
+    train_nn(5000, nn_model, optimizer, nn_loss_fn, col3_tensor, apm3_tensor, 6, 1)
 
-def nn_model_test_set(al_tensor, apm_tensor, nn_model, nn_loss_fn, test_set_name):
-    model_y = nn_model(al_tensor.view(-1, 1))
-    model_loss = nn_loss_fn(model_y, apm_tensor.view(-1, 1))
-    print("\nLOSS for %s (NN1): %s " % (test_set_name, model_loss))
+    nn_model_y = nn_model(col3_tensor)
+    nn_model_loss = loss_fn(nn_model_y, apm3_tensor.view(-1, 1))
+    print("\nLOSS for %s: %s " % ("MORE Features - TEST SET 3", nn_model_loss))
 
+    nn_model_y = nn_model(col1_tensor)
+    nn_model_loss = loss_fn(nn_model_y, apm1_tensor.view(-1, 1))
+    print("\nLOSS for %s: %s " % ("MORE Features - TEST SET 3", nn_model_loss))
 
-def nn_plot_test_test(al_tensor, apm_tensor, nn_model, test_set_name):
-    fn_x_tensor = torch.tensor(np.linspace(al_tensor.min(), al_tensor.max(), 1000), dtype=torch.float)
-    fn_y_tensor = nn_model(fn_x_tensor.view(-1, 1))
-    plot_data_set_and_function(al_tensor, apm_tensor, fn_x_tensor, fn_y_tensor.detach().numpy(), test_set_name)
-
-
-def create_test_sets(x_tensor, apm_tensor):
-    # build Set 1 with the first 30 entries (*** TEST SET 1 ***)
-    x_tensor_1 = x_tensor[:30]
-    y_tensor_1 = apm_tensor[:30]
-    print("\nx_tensor_1 (%s): %s" % (x_tensor_1.shape, x_tensor_1))
-    print("y_tensor_1 (%s): %s" % (y_tensor_1.shape, y_tensor_1))
-
-    # build an intermediate set with all remaining records beyond index 30
-    remaining_x_tensor = x_tensor[30:]
-    remaining_y_tensor = apm_tensor[30:]
-    # print("remaining_x_tensor (%s): %s" % (remaining_x_tensor.shape, remaining_x_tensor))
-    # print("remaining_y_tensor (%s): %s" % (remaining_y_tensor.shape, remaining_y_tensor))
-
-    # build Set 2 with 20% of remaining data (*** TEST SET 2 ***)
-    # calculate the size of the remaining data  and the index where its first 20% ends
-    remaining_size = remaining_x_tensor.shape[0]
-    twenty_percent_index = (remaining_size * 20) // 100
-    print("\nremaining_size: %s" % remaining_size)
-    print("twenty_percent_index: %s" % twenty_percent_index)
-
-    # create random permutation if integers from 0 to remaining_size
-    random_perm = torch.randperm(remaining_size)
-    print("random_perm (%s): %s" % (random_perm.shape, random_perm))
-    x_tensor_2 = remaining_x_tensor[random_perm[:twenty_percent_index]]
-    y_tensor_2 = remaining_y_tensor[random_perm[:twenty_percent_index]]
-    print("\nx_tensor_2 shape: %s" % x_tensor_2.shape)
-    print("y_tensor_2 shape: %s" % y_tensor_2.shape)
-
-    # build Set 3 with 80% of remaining data (*** TEST SET 3 / TRAINING SET ***)
-    x_tensor_3 = remaining_x_tensor[random_perm[twenty_percent_index:]]
-    y_tensor_3 = remaining_y_tensor[random_perm[twenty_percent_index:]]
-    print("\nx_tensor_3 (%s): %s" % (x_tensor_3.shape, x_tensor_3))
-    print("y_tensor_3 (%s): %s" % (y_tensor_3.shape, y_tensor_3))
-
-    return x_tensor_1, y_tensor_1, x_tensor_2, y_tensor_2, x_tensor_3, y_tensor_3
+    nn_model_y = nn_model(col2_tensor)
+    nn_model_loss = loss_fn(nn_model_y, apm2_tensor.view(-1, 1))
+    print("\nLOSS for %s: %s " % ("MORE Features - TEST SET 3", nn_model_loss))
 
 
 def main(filename):
@@ -708,33 +739,28 @@ def main(filename):
     Implement a function read_csv that takes a file name, and two column names and returns two tensors, one for each of the columns.
     Split the data into three sets: Use the first 30 entries as test set 1, then split the rest randomly into 20% test set 2 and 80% training set.
     '''
+    # --- LAB 1 ---
+    # read file
     al_tensor, apm_tensor = read_csv_enhanced(filename, ("APM", "ActionLatency"))
     al_tensor = al_tensor.squeeze()
     print("\nal_tensor (%s): %s" % (al_tensor.shape, al_tensor))
     print("apm_tensor (%s): %s" % (apm_tensor.shape, apm_tensor))
 
     al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor = create_test_sets(al_tensor, apm_tensor)
-
     lab_1(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
+
+    # --- LAB 2 ---
     lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
 
-    '''
+    # read file including more features
     columns_tensor, apm_tensor = read_csv_enhanced(filename, ("APM", "ActionLatency", "TotalMapExplored", "WorkersMade",
                                                      "UniqueUnitsMade", "ComplexUnitsMade", "ComplexAbilitiesUsed"))
     print("\ncolumns_tensor (%s): %s" % (columns_tensor.shape, columns_tensor))
     print("apm_tensor (%s): %s" % (apm_tensor.shape, apm_tensor))
-    
-    nn_model = SkillCraftNN(6, 10, 1, nn.ReLU())
-    optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
-    nn_loss_fn = nn.MSELoss()
-    print("\nmodel: %s" % nn_model)
 
-    # LAB NOTE: 5000 gives almost the same as 1000
-    train_nn(5000, nn_model, optimizer, nn_loss_fn, columns_tensor, apm_tensor, 6, 1)
-    nn_model_y = nn_model(columns_tensor)
-    nn_model_loss = loss_fn(nn_model_y, apm_tensor.view(-1, 1))
-    print("\nLOSS: %s " % nn_model_loss)
-    '''
+    col1_tensor, apm1_tensor, col2_tensor, apm2_tensor, col3_tensor, apm3_tensor = create_test_sets(columns_tensor, apm_tensor)
+    lab_2_more_features(columns_tensor, apm_tensor, col1_tensor, apm1_tensor, col2_tensor, apm2_tensor, col3_tensor, apm3_tensor)
+
 
 if __name__ == "__main__":
     main(sys.argv[1])
