@@ -518,9 +518,6 @@ class SkillCraftNN(nn.Module):
         super(SkillCraftNN, self).__init__()
         print("\n*** SkillCraftNN i: %s - h: %s - o: %s ***" % (input_n, hidden_n, output_n))
         self.hidden_linear = nn.Linear(input_n, hidden_n)
-        #self.hidden_activation = nn.Sigmoid()
-        #self.hidden_activation = nn.ReLU()
-        #self.hidden_activation = nn.Tanh()
         self.hidden_activation = activation_fn
         self.output_linear = nn.Linear(hidden_n, output_n)
 
@@ -552,7 +549,24 @@ def train_nn(iterations, nn_model, optimizer, nn_loss_fn, tensor_x, tensor_y, in
 
 
 def lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor):
-    ''' LINEAR '''
+    """
+    Lab 2.
+    :param al_tensor:
+    :param apm_tensor:
+    :param al1_tensor:
+    :param apm1_tensor:
+    :param al2_tensor:
+    :param apm2_tensor:
+    :param al3_tensor:
+    :param apm3_tensor:
+    :return: nothing.
+    """
+    ''' 
+    LINEAR NN:
+    Update your code to use torch.nn.Linear(1,1) instead of your own model function (the parameters are the number of 
+    inputs and outputs). Instead of w and b, the neural network gives you a parameters() method, which you should pass 
+    to your optimizer. Check if the results are the same, better or worse than your results from last week. 
+    '''
     nn_model = nn.Linear(1, 1)
     # LAB NOTE: 1e-4 is too slow, 1e-1 is a lot better
     optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
@@ -571,12 +585,16 @@ def lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tenso
     nn_model_test_set(al2_tensor, apm2_tensor, nn_model, nn_loss_fn, "NN1 - TEST SET 2")
     nn_plot_test_test(al2_tensor, apm2_tensor, nn_model, "NN1 - TEST SET 2")
 
-    ''' NEW NEURAL NETWORK '''
+    ''' 
+    NEW NEURAL NETWORK (using nn.Module)
+    For the purpose of this lab define a simple neural network with a few neurons in one hidden layer, and try several 
+    different numbers of hidden neurons (e.g. 1, 3, 5, 10) and types of activations functions (e.g. tanh, linear and 
+    ReLU). Always use a linear layer as the output layer! Report your results on the training set as well as the test 
+    sets. You can plot your predicted function by passing a list of ascending values for x (e.g. generated with 
+    np.linspace) and drawing the resulting curve. Also try and see what happens when you use 2000 neurons with a tanh 
+    activation function.
+    '''
     # Sigmoid
-    # 1 - Loss: 2740.765381
-    # 2 - Loss: 2685.651367
-    # 5 - Loss: 2670.873291
-    # 10 - Loss: 2671.457764
     nn_model = SkillCraftNN(1, 10, 1, nn.Sigmoid())
     print("\nmodel: %s" % nn_model)
     optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
@@ -587,10 +605,6 @@ def lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tenso
     nn_model_test_set(al2_tensor, apm2_tensor, nn_model, nn_loss_fn, "NN2 Sigmoid - TEST SET 2")
 
     # Tanh
-    # 1 - Loss: 2762.701416
-    # 2 - Loss: 2706.364746
-    # 5 - Loss: 2642.508545
-    # 10 - Loss: 2600.437988
     nn_model = SkillCraftNN(1, 10, 1, nn.Tanh())
     print("\nmodel: %s" % nn_model)
     optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
@@ -601,10 +615,6 @@ def lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tenso
     nn_model_test_set(al2_tensor, apm2_tensor, nn_model, nn_loss_fn, "NN2 Tanh - TEST SET 2")
 
     # ReLU
-    # 1 - Loss: 1194.804077
-    # 2 - Loss: 1198.752441
-    # 5 - Loss: 1016.576050
-    # 10 - Loss: 990.611328
     nn_model = SkillCraftNN(1, 10, 1, nn.ReLU())
     print("\nmodel: %s" % nn_model)
     optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
@@ -630,6 +640,13 @@ def lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tenso
     nn_model_test_set(al1_tensor, apm1_tensor, nn_model, nn_loss_fn, "NN2 Tanh - TEST SET 1")
     nn_model_test_set(al2_tensor, apm2_tensor, nn_model, nn_loss_fn, "NN2 Tanh - TEST SET 2")
 
+    '''
+    ... read all data for APM, ActionLatency, TotalMapExplored, WorkersMade, UniqueUnitsMade, ComplexUnitsMade and 
+    ComplexAbilitiesUsed into a tensor. Use the first column as your y tensor, and the other columns as your x tensor, 
+    and build a neural network that accepts these 6 inputs and predicts the y-values. Again try several different 
+    neural network architectures and report which one produced the best results.
+    '''
+
 
 def nn_model_test_set(al_tensor, apm_tensor, nn_model, nn_loss_fn, test_set_name):
     model_y = nn_model(al_tensor.view(-1, 1))
@@ -640,8 +657,44 @@ def nn_model_test_set(al_tensor, apm_tensor, nn_model, nn_loss_fn, test_set_name
 def nn_plot_test_test(al_tensor, apm_tensor, nn_model, test_set_name):
     fn_x_tensor = torch.tensor(np.linspace(al_tensor.min(), al_tensor.max(), 1000), dtype=torch.float)
     fn_y_tensor = nn_model(fn_x_tensor.view(-1, 1))
-    plot_data_set_and_function(al_tensor, apm_tensor, fn_x_tensor, fn_y_tensor.detach().numpy(),
-                               "NN 1 - %s" % test_set_name)
+    plot_data_set_and_function(al_tensor, apm_tensor, fn_x_tensor, fn_y_tensor.detach().numpy(), test_set_name)
+
+
+def create_test_sets(x_tensor, apm_tensor):
+    # build Set 1 with the first 30 entries (*** TEST SET 1 ***)
+    x_tensor_1 = x_tensor[:30]
+    y_tensor_1 = apm_tensor[:30]
+    print("\nx_tensor_1 (%s): %s" % (x_tensor_1.shape, x_tensor_1))
+    print("y_tensor_1 (%s): %s" % (y_tensor_1.shape, y_tensor_1))
+
+    # build an intermediate set with all remaining records beyond index 30
+    remaining_x_tensor = x_tensor[30:]
+    remaining_y_tensor = apm_tensor[30:]
+    # print("remaining_x_tensor (%s): %s" % (remaining_x_tensor.shape, remaining_x_tensor))
+    # print("remaining_y_tensor (%s): %s" % (remaining_y_tensor.shape, remaining_y_tensor))
+
+    # build Set 2 with 20% of remaining data (*** TEST SET 2 ***)
+    # calculate the size of the remaining data  and the index where its first 20% ends
+    remaining_size = remaining_x_tensor.shape[0]
+    twenty_percent_index = (remaining_size * 20) // 100
+    print("\nremaining_size: %s" % remaining_size)
+    print("twenty_percent_index: %s" % twenty_percent_index)
+
+    # create random permutation if integers from 0 to remaining_size
+    random_perm = torch.randperm(remaining_size)
+    print("random_perm (%s): %s" % (random_perm.shape, random_perm))
+    x_tensor_2 = remaining_x_tensor[random_perm[:twenty_percent_index]]
+    y_tensor_2 = remaining_y_tensor[random_perm[:twenty_percent_index]]
+    print("\nx_tensor_2 shape: %s" % x_tensor_2.shape)
+    print("y_tensor_2 shape: %s" % y_tensor_2.shape)
+
+    # build Set 3 with 80% of remaining data (*** TEST SET 3 / TRAINING SET ***)
+    x_tensor_3 = remaining_x_tensor[random_perm[twenty_percent_index:]]
+    y_tensor_3 = remaining_y_tensor[random_perm[twenty_percent_index:]]
+    print("\nx_tensor_3 (%s): %s" % (x_tensor_3.shape, x_tensor_3))
+    print("y_tensor_3 (%s): %s" % (y_tensor_3.shape, y_tensor_3))
+
+    return x_tensor_1, y_tensor_1, x_tensor_2, y_tensor_2, x_tensor_3, y_tensor_3
 
 
 def main(filename):
@@ -660,59 +713,28 @@ def main(filename):
     print("\nal_tensor (%s): %s" % (al_tensor.shape, al_tensor))
     print("apm_tensor (%s): %s" % (apm_tensor.shape, apm_tensor))
 
-    # build Set 1 with the first 30 entries (*** TEST SET 1 ***)
-    al1_tensor = al_tensor[:30]
-    apm1_tensor = apm_tensor[:30]
-    print("\nal1_tensor (%s): %s" % (al1_tensor.shape, al1_tensor))
-    print("apm1_tensor (%s): %s" % (apm1_tensor.shape, apm1_tensor))
+    al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor = create_test_sets(al_tensor, apm_tensor)
 
-    # build an intermediate set with all remaining records beyond index 30
-    remaining_al_tensor = al_tensor[30:]
-    remaining_apm_tensor = apm_tensor[30:]
-    # print("remaining_al_tensor (%s): %s" % (remaining_al_tensor.shape, remaining_al_tensor))
-    # print("remaining_apm_tensor (%s): %s" % (remaining_apm_tensor.shape, remaining_apm_tensor))
+    lab_1(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
+    lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
 
-    # build Set 2 with 20% of remaining data (*** TEST SET 2 ***)
-    # calculate the size of the remaining data  and the index where its first 20% ends
-    remaining_size = remaining_al_tensor.shape[0]
-    twenty_percent_index = (remaining_size * 20) // 100
-    print("\nremaining_size: %s" % remaining_size)
-    print("twenty_percent_index: %s" % twenty_percent_index)
-
-    # create random permutation if integers from 0 to remaining_size
-    random_perm = torch.randperm(remaining_size)
-    print("random_perm (%s): %s" % (random_perm.shape, random_perm))
-
-    al2_tensor = remaining_al_tensor[random_perm[:twenty_percent_index]]
-    apm2_tensor = remaining_apm_tensor[random_perm[:twenty_percent_index]]
-    print("\nal2_tensor shape: %s" % al2_tensor.shape)
-    print("apm2_tensor shape: %s" % apm2_tensor.shape)
-
-    # build Set 3 with 80% of remaining data (*** TRAINING SET ***)
-    al3_tensor = remaining_al_tensor[random_perm[twenty_percent_index:]]
-    apm3_tensor = remaining_apm_tensor[random_perm[twenty_percent_index:]]
-    print("\nal3_tensor (%s): %s" % (al3_tensor.shape, al3_tensor))
-    print("apm3_tensor (%s): %s" % (apm3_tensor.shape, apm3_tensor))
-
-    #lab_1(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
-    #lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
-
+    '''
     columns_tensor, apm_tensor = read_csv_enhanced(filename, ("APM", "ActionLatency", "TotalMapExplored", "WorkersMade",
                                                      "UniqueUnitsMade", "ComplexUnitsMade", "ComplexAbilitiesUsed"))
     print("\ncolumns_tensor (%s): %s" % (columns_tensor.shape, columns_tensor))
     print("apm_tensor (%s): %s" % (apm_tensor.shape, apm_tensor))
-
+    
     nn_model = SkillCraftNN(6, 10, 1, nn.ReLU())
     optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
     nn_loss_fn = nn.MSELoss()
     print("\nmodel: %s" % nn_model)
-    # LAB NOTE: 5000 gives almost the same as 1000
-    train_nn(1000, nn_model, optimizer, nn_loss_fn, columns_tensor, apm_tensor, 6, 1)
 
+    # LAB NOTE: 5000 gives almost the same as 1000
+    train_nn(5000, nn_model, optimizer, nn_loss_fn, columns_tensor, apm_tensor, 6, 1)
     nn_model_y = nn_model(columns_tensor)
     nn_model_loss = loss_fn(nn_model_y, apm_tensor.view(-1, 1))
     print("\nLOSS: %s " % nn_model_loss)
-
+    '''
 
 if __name__ == "__main__":
     main(sys.argv[1])
