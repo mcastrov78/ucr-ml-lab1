@@ -802,7 +802,7 @@ def lab_2_more_features(col_tensor, apm_tensor, col1_tensor, apm1_tensor, col2_t
     # Tanh
     nn_model = SkillCraftNN(6, 10, 1, nn.Tanh())
     optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
-    train_nn(5000, nn_model, optimizer, nn_loss_fn, col3_tensor, apm3_tensor, 6, 1)
+    train_nn(1000, nn_model, optimizer, nn_loss_fn, col3_tensor, apm3_tensor, 6, 1)
 
     nn_model_test_set_more_features(col3_tensor, apm3_tensor, nn_model, nn_loss_fn, "MORE Feat - Tanh - TEST SET 3")
     nn_model_test_set_more_features(col1_tensor, apm1_tensor, nn_model, nn_loss_fn, "MORE Feat - Tanh - TEST SET 1")
@@ -835,7 +835,7 @@ def main(filename):
     # -------------------- LAB 2 --------------------
 
     # reuse Lab 1's test sets for Lab 2
-    #lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
+    lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
 
     # read file including more features
     columns_tensor, apm_tensor = read_csv_enhanced(filename, ("APM", "ActionLatency", "TotalMapExplored", "WorkersMade",
