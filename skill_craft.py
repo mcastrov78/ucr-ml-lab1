@@ -7,6 +7,9 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 
 
+''' -------------------------- LAB 1 -------------------------------------- '''
+
+
 def read_csv_enhanced(filename, columns):
     """
     Read CSV file.
@@ -26,6 +29,13 @@ def read_csv_enhanced(filename, columns):
 
 
 def create_test_sets(x_tensor, apm_tensor):
+    """
+    Create test sets as follows: 1 -> 30 records, 2 -> 20% of remaining records, 3 -> 80% of remaining records.
+
+    :param x_tensor: complete X tensor
+    :param apm_tensor: complete Y tensor
+    :return: 3 tests sets arranged as 3 X tensors and 3 Y tensors.
+    """
     print("\nCREATING TEST SETS ...")
     # build Set 1 with the first 30 entries (*** TEST SET 1 ***)
     x_tensor_1 = x_tensor[:30]
@@ -356,6 +366,7 @@ def training_nonlin(iterations, tensor_a, tensor_b, tensor_c, tensor_x, tensor_y
 def lab_1(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor):
     """
     Lab 1.
+
     :param al_tensor: 
     :param apm_tensor: 
     :param al1_tensor: 
@@ -550,8 +561,18 @@ def lab_1(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tenso
 
 
 class SkillCraftNN(nn.Module):
+    """
+    Neural Network for SkillCraft Lab 2.
+    """
 
     def __init__(self, input_n, hidden_n, output_n, activation_fn):
+        """
+        Initialize SkillCraftNN.
+        :param input_n: number of inputs
+        :param hidden_n: number of hidden neurons
+        :param output_n: number of outputs
+        :param activation_fn: activation function for the hidden layer
+        """
         super(SkillCraftNN, self).__init__()
         print("\n*** SkillCraftNN i: %s - h: %s - o: %s ***" % (input_n, hidden_n, output_n))
         self.hidden_linear = nn.Linear(input_n, hidden_n)
@@ -559,6 +580,11 @@ class SkillCraftNN(nn.Module):
         self.output_linear = nn.Linear(hidden_n, output_n)
 
     def forward(self, input):
+        """
+        Pass the input through the NN layers.
+        :param input: input to the module
+        :return: output from the module
+        """
         hidden_t = self.hidden_linear(input)
         activated_t = self.hidden_activation(hidden_t)
         output_t = self.output_linear(activated_t)
@@ -566,6 +592,18 @@ class SkillCraftNN(nn.Module):
 
 
 def train_nn(iterations, nn_model, optimizer, nn_loss_fn, tensor_x, tensor_y, input_n, output_n):
+    """
+    Train Neural Network.
+    :param iterations: epochs
+    :param nn_model: NN model
+    :param optimizer: optimizer
+    :param nn_loss_fn: loss function
+    :param tensor_x: X tensor X
+    :param tensor_y: Y tensor
+    :param input_n: number of inputs
+    :param output_n: number of outputs
+    :return:
+    """
     print("\n*** TRAINING NN ***")
     print("\ntensor_x (%s): %s" % (tensor_x.shape, tensor_x))
     tensor_x_reshaped = tensor_x.view(-1, input_n)
@@ -584,12 +622,29 @@ def train_nn(iterations, nn_model, optimizer, nn_loss_fn, tensor_x, tensor_y, in
 
 
 def nn_model_test_set(al_tensor, apm_tensor, nn_model, nn_loss_fn, test_set_name):
+    """
+    Calculate predicted Y values and the loss against real Y values.
+    :param al_tensor: X tensor
+    :param apm_tensor: Y tensor
+    :param nn_model: NN model
+    :param nn_loss_fn:  loss function
+    :param test_set_name: test set name for displaying purposes
+    :return: nothing
+    """
     model_y = nn_model(al_tensor.view(-1, 1))
     model_loss = nn_loss_fn(model_y, apm_tensor.view(-1, 1))
     print("\nLOSS for %s (NN1): %s " % (test_set_name, model_loss))
 
 
 def nn_plot_test_test(al_tensor, apm_tensor, nn_model, test_set_name):
+    """
+    Scatterplot test set X and Y values and the function graph.
+    :param al_tensor: X tensor
+    :param apm_tensor: Y tensor
+    :param nn_model: NN model
+    :param test_set_name: test set name for displaying purposes
+    :return: nothing
+    """
     fn_x_tensor = torch.tensor(np.linspace(al_tensor.min(), al_tensor.max(), 1000), dtype=torch.float)
     fn_y_tensor = nn_model(fn_x_tensor.view(-1, 1))
     plot_data_set_and_function(al_tensor, apm_tensor, fn_x_tensor, fn_y_tensor.detach().numpy(), test_set_name)
@@ -688,9 +743,25 @@ def lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tenso
     nn_model_test_set(al2_tensor, apm2_tensor, nn_model, nn_loss_fn, "NN2 Tanh - TEST SET 2")
 
 
+def nn_model_test_set_more_features(columns_tensor, apm_tensor, nn_model, nn_loss_fn, test_set_name):
+    """
+    Calculate predicted Y values and the loss against real Y values.
+    :param columns_tensor: X tensor
+    :param apm_tensor: Y tensor
+    :param nn_model: NN model
+    :param nn_loss_fn:  loss function
+    :param test_set_name: test set name for displaying purposes
+    :return: nothing
+    """
+    nn_model_y = nn_model(columns_tensor)
+    nn_model_loss = nn_loss_fn(nn_model_y, apm_tensor.view(-1, 1))
+    print("\nLOSS for %s: %s " % (test_set_name, nn_model_loss))
+
+
 def lab_2_more_features(col_tensor, apm_tensor, col1_tensor, apm1_tensor, col2_tensor, apm2_tensor, col3_tensor, apm3_tensor):
     """
     Lab2. MORE FEATURES.
+
     :param col_tensor: 
     :param apm_tensor: 
     :param col1_tensor: 
@@ -712,20 +783,31 @@ def lab_2_more_features(col_tensor, apm_tensor, col1_tensor, apm1_tensor, col2_t
     nn_loss_fn = nn.MSELoss()
     print("\nmodel: %s" % nn_model)
 
-    # LAB NOTE: 1000 gives almost the same as 1000
+    # ReLU: 1000 seems fine, 5000 overfits
+    train_nn(1000, nn_model, optimizer, nn_loss_fn, col3_tensor, apm3_tensor, 6, 1)
+
+    nn_model_test_set_more_features(col3_tensor, apm3_tensor, nn_model, nn_loss_fn, "MORE Feat - ReLU - TEST SET 3")
+    nn_model_test_set_more_features(col1_tensor, apm1_tensor, nn_model, nn_loss_fn, "MORE Feat - ReLU - TEST SET 1")
+    nn_model_test_set_more_features(col2_tensor, apm2_tensor, nn_model, nn_loss_fn, "MORE Feat - ReLU - TEST SET 2")
+
+    # Sigmoid
+    nn_model = SkillCraftNN(6, 10, 1, nn.Sigmoid())
+    optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
+    train_nn(1000, nn_model, optimizer, nn_loss_fn, col3_tensor, apm3_tensor, 6, 1)
+
+    nn_model_test_set_more_features(col3_tensor, apm3_tensor, nn_model, nn_loss_fn, "MORE Feat - Sigmoid - TEST SET 3")
+    nn_model_test_set_more_features(col1_tensor, apm1_tensor, nn_model, nn_loss_fn, "MORE Feat - Sigmoid - TEST SET 1")
+    nn_model_test_set_more_features(col2_tensor, apm2_tensor, nn_model, nn_loss_fn, "MORE Feat - Sigmoid - TEST SET 2")
+
+    # Tanh
+    nn_model = SkillCraftNN(6, 10, 1, nn.Tanh())
+    optimizer = optim.Adam(nn_model.parameters(), lr=1e-1)
     train_nn(5000, nn_model, optimizer, nn_loss_fn, col3_tensor, apm3_tensor, 6, 1)
 
-    nn_model_y = nn_model(col3_tensor)
-    nn_model_loss = loss_fn(nn_model_y, apm3_tensor.view(-1, 1))
-    print("\nLOSS for %s: %s " % ("MORE Features - TEST SET 3", nn_model_loss))
+    nn_model_test_set_more_features(col3_tensor, apm3_tensor, nn_model, nn_loss_fn, "MORE Feat - Tanh - TEST SET 3")
+    nn_model_test_set_more_features(col1_tensor, apm1_tensor, nn_model, nn_loss_fn, "MORE Feat - Tanh - TEST SET 1")
+    nn_model_test_set_more_features(col2_tensor, apm2_tensor, nn_model, nn_loss_fn, "MORE Feat - Tanh - TEST SET 2")
 
-    nn_model_y = nn_model(col1_tensor)
-    nn_model_loss = loss_fn(nn_model_y, apm1_tensor.view(-1, 1))
-    print("\nLOSS for %s: %s " % ("MORE Features - TEST SET 3", nn_model_loss))
-
-    nn_model_y = nn_model(col2_tensor)
-    nn_model_loss = loss_fn(nn_model_y, apm2_tensor.view(-1, 1))
-    print("\nLOSS for %s: %s " % ("MORE Features - TEST SET 3", nn_model_loss))
 
 
 def main(filename):
@@ -733,24 +815,27 @@ def main(filename):
     Main function.
     :param filename: name of the file to read
     """
+    # -------------------- LAB 1 --------------------
     '''
     Your first task is to read the data set from the provided CSV file and put the data into tensors.
     We will need two tensors: One for the input (the column ActionLatency) and one for the variable we want to predict (the column APM).
     Implement a function read_csv that takes a file name, and two column names and returns two tensors, one for each of the columns.
     Split the data into three sets: Use the first 30 entries as test set 1, then split the rest randomly into 20% test set 2 and 80% training set.
     '''
-    # --- LAB 1 ---
     # read file
     al_tensor, apm_tensor = read_csv_enhanced(filename, ("APM", "ActionLatency"))
     al_tensor = al_tensor.squeeze()
     print("\nal_tensor (%s): %s" % (al_tensor.shape, al_tensor))
     print("apm_tensor (%s): %s" % (apm_tensor.shape, apm_tensor))
 
+    # create test sets for Lab 1 and pass them to lab1()
     al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor = create_test_sets(al_tensor, apm_tensor)
-    lab_1(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
+    #lab_1(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
 
-    # --- LAB 2 ---
-    lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
+    # -------------------- LAB 2 --------------------
+
+    # reuse Lab 1's test sets for Lab 2
+    #lab_2(al_tensor, apm_tensor, al1_tensor, apm1_tensor, al2_tensor, apm2_tensor, al3_tensor, apm3_tensor)
 
     # read file including more features
     columns_tensor, apm_tensor = read_csv_enhanced(filename, ("APM", "ActionLatency", "TotalMapExplored", "WorkersMade",
@@ -758,6 +843,7 @@ def main(filename):
     print("\ncolumns_tensor (%s): %s" % (columns_tensor.shape, columns_tensor))
     print("apm_tensor (%s): %s" % (apm_tensor.shape, apm_tensor))
 
+    # create new test sets for Lab 2 and pass them to lab_2_more_features()
     col1_tensor, apm1_tensor, col2_tensor, apm2_tensor, col3_tensor, apm3_tensor = create_test_sets(columns_tensor, apm_tensor)
     lab_2_more_features(columns_tensor, apm_tensor, col1_tensor, apm1_tensor, col2_tensor, apm2_tensor, col3_tensor, apm3_tensor)
 
